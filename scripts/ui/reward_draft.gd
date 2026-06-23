@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-signal upgrade_selected(upgrade_id: String)
+signal upgrade_selected(index: int, upgrade_id: String)
 
 const UpgradeCardScript: GDScript = preload("res://scripts/ui/upgrade_card.gd")
 
@@ -154,6 +154,7 @@ func show_draft() -> void:
 
 func hide_draft() -> void:
 	_is_open = false
+	_selection_committed = false
 	visible = false
 
 func _focus_first_card() -> void:
@@ -174,23 +175,32 @@ func _on_card_chosen_by_index(index: int) -> void:
 	if index < 0 or index >= _options.size():
 		return
 	var option: Dictionary = _options[index]
-	_on_card_chosen_by_id(String(option.get("id", "")))
+	_commit_selection(index, String(option.get("id", "")))
 
 func _on_card_chosen_by_id(upgrade_id: String) -> void:
 	if not _is_open or _selection_committed:
 		return
+	var resolved_index: int = _find_upgrade_index(upgrade_id)
+	if resolved_index < 0:
+		return
+	_commit_selection(resolved_index, upgrade_id)
+
+func _commit_selection(index: int, upgrade_id: String) -> void:
+	if not _is_open or _selection_committed:
+		return
+	if index < 0 or index >= _options.size():
+		return
 	if upgrade_id == "":
 		return
-	if not _has_upgrade_id(upgrade_id):
-		return
 	_selection_committed = true
-	emit_signal("upgrade_selected", upgrade_id)
+	emit_signal("upgrade_selected", index, upgrade_id)
 
-func _has_upgrade_id(upgrade_id: String) -> bool:
-	for option in _options:
+func _find_upgrade_index(upgrade_id: String) -> int:
+	for index in range(_options.size()):
+		var option: Dictionary = _options[index]
 		if String(option.get("id", "")) == upgrade_id:
-			return true
-	return false
+			return index
+	return -1
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_open:
