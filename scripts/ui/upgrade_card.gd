@@ -3,9 +3,10 @@ extends Control
 # Single upgrade card used by the reward draft.
 # Big, controller-friendly. Hover/focus pops the card with a gold glow.
 
-signal card_chosen(index: int)
+signal card_chosen(index: int, upgrade_id: String)
 
 @export var card_index: int = 0
+@export var upgrade_id: String = ""
 @export var card_title: String = "UPGRADE"
 @export var card_description: String = "Does cool stuff."
 @export var hotkey_label: String = "1"
@@ -35,8 +36,9 @@ func _ready() -> void:
 	_build_ui()
 	_refresh_text()
 
-func configure(index: int, title: String, description: String, hotkey: String = "", controller: String = "") -> void:
+func configure(index: int, id: String, title: String, description: String, hotkey: String = "", controller: String = "") -> void:
 	card_index = index
+	upgrade_id = id
 	card_title = title
 	card_description = description
 	if hotkey != "":
@@ -71,7 +73,6 @@ func _build_ui() -> void:
 	vbox.add_theme_constant_override("separation", 20)
 	_panel.add_child(vbox)
 
-	# Ribbon header (e.g. "PICK 1").
 	_ribbon = PanelContainer.new()
 	_ribbon.name = "Ribbon"
 	_ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -93,7 +94,6 @@ func _build_ui() -> void:
 	_ribbon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ribbon.add_child(_ribbon_label)
 
-	# Big icon-shaped panel placeholder.
 	var icon_panel: PanelContainer = PanelContainer.new()
 	icon_panel.name = "IconArea"
 	icon_panel.custom_minimum_size = Vector2(0.0, 150.0)
@@ -126,7 +126,6 @@ func _build_ui() -> void:
 	_description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_description_label)
 
-	# Hotkey pill ("1 / A").
 	_hotkey_pill = PanelContainer.new()
 	_hotkey_pill.name = "HotkeyPill"
 	_hotkey_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -147,7 +146,6 @@ func _build_ui() -> void:
 	_hotkey_label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hotkey_pill.add_child(_hotkey_label_node)
 
-	# Invisible full-card button for mouse + keyboard focus.
 	_button = Button.new()
 	_button.name = "ClickArea"
 	_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -165,7 +163,6 @@ func _build_ui() -> void:
 	_button.focus_exited.connect(_on_hover_end)
 	add_child(_button)
 
-	# Style font sizes via palette if available.
 	if _palette != null:
 		_palette.style_accent_label(_ribbon_label, 28, _palette.COLOR_BONE)
 		_palette.style_display_label(_title_label, 40, _palette.COLOR_HOT_GOLD)
@@ -188,7 +185,7 @@ func grab_card_focus() -> void:
 		_button.grab_focus()
 
 func _on_pressed() -> void:
-	emit_signal("card_chosen", card_index)
+	emit_signal("card_chosen", card_index, upgrade_id)
 
 func _on_hover_start() -> void:
 	_is_focused = true
