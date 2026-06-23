@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://puckkinghudrewarddraft"]
+
+[ext_resource type="Script" path="res://scripts/ui/reward_draft.gd" id="1_reward_draft"]
+
+[node name="RewardDraft" type="CanvasLayer"]
+layer = 50
+script = ExtResource("1_reward_draft")

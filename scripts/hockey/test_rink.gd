@@ -1,5 +1,9 @@
 extends Node3D
 
+const MATCH_HUD_SCENE: PackedScene = preload("res://scenes/ui/MatchHUD.tscn")
+const REWARD_DRAFT_SCENE: PackedScene = preload("res://scenes/ui/RewardDraft.tscn")
+const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/ui/PauseMenu.tscn")
+
 const RINK_LENGTH: float = 34.0
 const RINK_WIDTH: float = 18.0
 const ICE_THICKNESS: float = 0.12
@@ -13,10 +17,14 @@ const PUCK_Y: float = 0.18
 const HOME_GOAL_X: float = RINK_LENGTH * 0.5 - 1.05
 const AWAY_GOAL_X: float = -RINK_LENGTH * 0.5 + 1.05
 
+const POST_GOAL_RESET_DELAY: float = 3.0
+const REWARD_DRAFT_DELAY: float = 2.6
+
 var _home_score: int = 0
 var _away_score: int = 0
 var _reward_visible: bool = false
-var _selected_upgrades: Array[String] = []
+var _goal_lockout: bool = false
+var _selected_upgrades: Array[Dictionary] = []
 var _reward_options: Array[Dictionary] = [
 	{
 		"id": "rocket_skates",
@@ -34,11 +42,10 @@ var _reward_options: Array[Dictionary] = [
 		"description": "+Checking power, +hit range, +puck pop force."
 	}
 ]
-var _reward_buttons: Array[Button] = []
-var _score_label: Label = null
-var _status_label: Label = null
-var _upgrade_label: Label = null
-var _reward_root: Control = null
+
+var _hud: CanvasLayer = null
+var _reward_draft: CanvasLayer = null
+var _pause_menu: CanvasLayer = null
 
 @onready var world: Node3D = $World
 @onready var camera: Camera3D = $CameraRig/IsometricCamera
@@ -52,40 +59,55 @@ var _reward_root: Control = null
 func _ready() -> void:
 	_configure_camera()
 	_build_test_rink()
-	_build_match_ui()
+	_build_ui()
 	_update_scoreboard()
 	_reset_faceoff(false)
+	_hud.show_notification("FIRST HOME GOAL TRIGGERS REWARD DRAFT", Color(1.0, 0.78, 0.10, 1.0), 2.4)
 
 func _process(_delta: float) -> void:
 	if _reward_visible:
 		return
+	if _pause_menu != null and _pause_menu.has_method("is_open") and _pause_menu.call("is_open"):
+		return
 	_check_goal_state()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _reward_visible:
+	if event.is_action_pressed("pause_menu"):
+		_toggle_pause()
+		get_viewport().set_input_as_handled()
+
+func _build_ui() -> void:
+	_hud = MATCH_HUD_SCENE.instantiate()
+	add_child(_hud)
+
+	_reward_draft = REWARD_DRAFT_SCENE.instantiate()
+	add_child(_reward_draft)
+	_reward_draft.set_options(_reward_options)
+	_reward_draft.upgrade_selected.connect(_on_reward_selected)
+
+	_pause_menu = PAUSE_MENU_SCENE.instantiate()
+	add_child(_pause_menu)
+	_pause_menu.resume_requested.connect(_on_pause_resume)
+	_pause_menu.restart_requested.connect(_on_pause_restart)
+	_pause_menu.quit_requested.connect(_on_pause_quit)
+
+func _toggle_pause() -> void:
+	if _reward_visible:
 		return
+	if _pause_menu == null:
+		return
+	_pause_menu.toggle()
 
-	if event is InputEventKey:
-		var key_event: InputEventKey = event as InputEventKey
-		if not key_event.pressed or key_event.echo:
-			return
-		if key_event.keycode == KEY_1:
-			_select_reward(0)
-		elif key_event.keycode == KEY_2:
-			_select_reward(1)
-		elif key_event.keycode == KEY_3:
-			_select_reward(2)
+func _on_pause_resume() -> void:
+	_hud.show_notification("BACK IN PLAY", Color(0.18, 0.55, 1.0, 1.0), 1.0)
 
-	if event is InputEventJoypadButton:
-		var button_event: InputEventJoypadButton = event as InputEventJoypadButton
-		if not button_event.pressed:
-			return
-		if button_event.button_index == JOY_BUTTON_A:
-			_select_reward(0)
-		elif button_event.button_index == JOY_BUTTON_X:
-			_select_reward(1)
-		elif button_event.button_index == JOY_BUTTON_Y:
-			_select_reward(2)
+func _on_pause_restart() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+func _on_pause_quit() -> void:
+	get_tree().paused = false
+	get_tree().quit()
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -96,6 +118,8 @@ func _configure_camera() -> void:
 func _check_goal_state() -> void:
 	if _puck == null:
 		return
+	if _goal_lockout:
+		return
 
 	var puck_position: Vector3 = _puck.global_position
 	var is_inside_goal_width: bool = abs(puck_position.z) <= GOAL_WIDTH * 0.5 + 0.35
@@ -105,42 +129,62 @@ func _check_goal_state() -> void:
 	if puck_position.x >= HOME_GOAL_X:
 		_home_score += 1
 		_update_scoreboard()
-		_show_reward_draft()
+		_hud.celebrate_goal("HOME")
+		_goal_lockout = true
+		_set_match_enabled(false)
+		_reset_faceoff(false)
+		_schedule_home_goal_draft()
 	elif puck_position.x <= AWAY_GOAL_X:
 		_away_score += 1
 		_update_scoreboard()
-		_show_status("AWAY GOAL! PUCK DROP AT CENTER.")
-		_reset_faceoff(true)
+		_hud.celebrate_goal("AWAY")
+		_goal_lockout = true
+		_set_match_enabled(false)
+		_reset_faceoff(false)
+		_schedule_post_goal_reset()
+
+func _schedule_home_goal_draft() -> void:
+	var timer: SceneTreeTimer = get_tree().create_timer(REWARD_DRAFT_DELAY)
+	timer.timeout.connect(_on_home_goal_draft_timeout)
+
+func _on_home_goal_draft_timeout() -> void:
+	_show_reward_draft()
+
+func _schedule_post_goal_reset() -> void:
+	var timer: SceneTreeTimer = get_tree().create_timer(POST_GOAL_RESET_DELAY)
+	timer.timeout.connect(_on_post_goal_reset_timeout)
+
+func _on_post_goal_reset_timeout() -> void:
+	if _reward_visible:
+		return
+	_goal_lockout = false
+	_hud.show_notification("FACEOFF AT CENTER", Color(1.0, 0.78, 0.10, 1.0), 1.2)
+	_set_match_enabled(true)
+	_reset_faceoff(true)
 
 func _show_reward_draft() -> void:
 	_reward_visible = true
 	_set_match_enabled(false)
-	_show_status("GOAL! CHOOSE YOUR REWARD.")
 	_reset_faceoff(false)
 
-	if _reward_root != null:
-		_reward_root.visible = true
+	if _reward_draft != null:
+		_reward_draft.show_draft()
 
-	for index: int in range(_reward_buttons.size()):
-		var option: Dictionary = _reward_options[index]
-		var button: Button = _reward_buttons[index]
-		button.text = "%d. %s\n%s" % [index + 1, String(option["title"]), String(option["description"])]
-
-func _select_reward(index: int) -> void:
+func _on_reward_selected(index: int, upgrade_id: String) -> void:
 	if index < 0 or index >= _reward_options.size():
 		return
 
 	var option: Dictionary = _reward_options[index]
-	var upgrade_id: String = String(option["id"])
-	_selected_upgrades.append(upgrade_id)
+	_selected_upgrades.append(option)
 	_apply_upgrade(upgrade_id)
-	_update_upgrade_label()
+	_update_upgrade_display()
 
 	_reward_visible = false
-	if _reward_root != null:
-		_reward_root.visible = false
+	_goal_lockout = false
+	if _reward_draft != null:
+		_reward_draft.hide_draft()
 
-	_show_status("SELECTED: %s" % String(option["title"]))
+	_hud.show_notification("PICKED UP: %s" % String(option["title"]), Color(1.0, 0.78, 0.10, 1.0), 1.8)
 	_set_match_enabled(true)
 	_reset_faceoff(true)
 
@@ -193,108 +237,13 @@ func _set_match_enabled(is_enabled: bool) -> void:
 	_away_ai.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
 	_puck.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
 
-func _show_status(message: String) -> void:
-	if _status_label != null:
-		_status_label.text = message
-
 func _update_scoreboard() -> void:
-	if _score_label != null:
-		_score_label.text = "HOME %d  -  %d AWAY" % [_home_score, _away_score]
+	if _hud != null:
+		_hud.set_score(_home_score, _away_score)
 
-func _update_upgrade_label() -> void:
-	if _upgrade_label == null:
-		return
-
-	if _selected_upgrades.is_empty():
-		_upgrade_label.text = "Upgrades: none"
-		return
-
-	var display_names: Array[String] = []
-	for upgrade_id: String in _selected_upgrades:
-		display_names.append(_get_upgrade_title(upgrade_id))
-	_upgrade_label.text = "Upgrades: %s" % ", ".join(display_names)
-
-func _get_upgrade_title(upgrade_id: String) -> String:
-	for option: Dictionary in _reward_options:
-		if String(option["id"]) == upgrade_id:
-			return String(option["title"])
-	return upgrade_id
-
-func _build_match_ui() -> void:
-	var hud_layer: CanvasLayer = CanvasLayer.new()
-	hud_layer.name = "MatchHUD"
-	add_child(hud_layer)
-
-	var hud_root: Control = Control.new()
-	hud_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hud_layer.add_child(hud_root)
-
-	_score_label = Label.new()
-	_score_label.position = Vector2(32.0, 24.0)
-	_score_label.add_theme_font_size_override("font_size", 32)
-	hud_root.add_child(_score_label)
-
-	_status_label = Label.new()
-	_status_label.position = Vector2(32.0, 66.0)
-	_status_label.add_theme_font_size_override("font_size", 22)
-	_status_label.text = "FIRST HOME GOAL TRIGGERS REWARD DRAFT"
-	hud_root.add_child(_status_label)
-
-	_upgrade_label = Label.new()
-	_upgrade_label.position = Vector2(32.0, 100.0)
-	_upgrade_label.add_theme_font_size_override("font_size", 18)
-	hud_root.add_child(_upgrade_label)
-	_update_upgrade_label()
-
-	var reward_layer: CanvasLayer = CanvasLayer.new()
-	reward_layer.name = "RewardDraftLayer"
-	add_child(reward_layer)
-
-	_reward_root = Control.new()
-	_reward_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_reward_root.visible = false
-	reward_layer.add_child(_reward_root)
-
-	var shade: ColorRect = ColorRect.new()
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.0, 0.0, 0.0, 0.62)
-	_reward_root.add_child(shade)
-
-	var panel: PanelContainer = PanelContainer.new()
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -430.0
-	panel.offset_top = -260.0
-	panel.offset_right = 430.0
-	panel.offset_bottom = 260.0
-	_reward_root.add_child(panel)
-
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
-	panel.add_child(vbox)
-
-	var title: Label = Label.new()
-	title.text = "POST-MATCH REWARD DRAFT"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
-	vbox.add_child(title)
-
-	var subtitle: Label = Label.new()
-	subtitle.text = "Pick one upgrade. Keys: 1/2/3. Controller: A/X/Y."
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 18)
-	vbox.add_child(subtitle)
-
-	_reward_buttons.clear()
-	for index: int in range(_reward_options.size()):
-		var button: Button = Button.new()
-		button.custom_minimum_size = Vector2(780.0, 92.0)
-		button.add_theme_font_size_override("font_size", 18)
-		button.pressed.connect(Callable(self, "_select_reward").bind(index))
-		vbox.add_child(button)
-		_reward_buttons.append(button)
+func _update_upgrade_display() -> void:
+	if _hud != null:
+		_hud.set_upgrades(_selected_upgrades)
 
 func _build_test_rink() -> void:
 	_create_floor_backdrop()
