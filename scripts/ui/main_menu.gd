@@ -1,12 +1,8 @@
 extends Control
 
-# Main menu — title, preset picker, settings stub, quit.
-# Routes selection to a fresh TestRink with the chosen match preset.
-
 const MATCH_SCENE_PATH: String = "res://scenes/match/TestRink.tscn"
 const PRESET_SELECT_KEY: String = "puck_king_hell/selected_preset_id"
 
-# Held in a global singleton state node so TestRink can read it on load.
 var _palette: Node = null
 var _title_label: Label = null
 var _subtitle_label: Label = null
@@ -43,7 +39,6 @@ func _build_ui() -> void:
 	diag.offset_right = 400.0
 	add_child(diag)
 
-	# Root layout: VBox with title and a 2-column body.
 	var root_vbox: VBoxContainer = VBoxContainer.new()
 	root_vbox.name = "RootLayout"
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -65,7 +60,7 @@ func _build_title(parent: VBoxContainer) -> void:
 	parent.add_child(header)
 
 	var bolt_left: Label = Label.new()
-	bolt_left.text = "\u26A1"
+	bolt_left.text = "!"
 	bolt_left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(bolt_left)
 
@@ -84,7 +79,7 @@ func _build_title(parent: VBoxContainer) -> void:
 	title_block.add_child(_subtitle_label)
 
 	var bolt_right: Label = Label.new()
-	bolt_right.text = "\u26A1"
+	bolt_right.text = "!"
 	bolt_right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(bolt_right)
 
@@ -101,7 +96,6 @@ func _build_body(parent: VBoxContainer) -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(body)
 
-	# Left column — preset picker.
 	var left_panel: PanelContainer = PanelContainer.new()
 	left_panel.custom_minimum_size = Vector2(820.0, 0.0)
 	left_panel.add_theme_stylebox_override("panel", _make_panel_style())
@@ -123,6 +117,7 @@ func _build_body(parent: VBoxContainer) -> void:
 		btn.custom_minimum_size = Vector2(0.0, 76.0)
 		btn.focus_mode = Control.FOCUS_ALL
 		var preset_id: String = String(preset.get("id", ""))
+		btn.set_meta("preset_id", preset_id)
 		btn.pressed.connect(_on_preset_button_pressed.bind(preset_id))
 		btn.focus_entered.connect(_on_preset_button_focused.bind(preset_id))
 		btn.mouse_entered.connect(_on_preset_button_focused.bind(preset_id))
@@ -138,7 +133,6 @@ func _build_body(parent: VBoxContainer) -> void:
 		_palette.style_accent_label(_preset_blurb_label, 22, _palette.COLOR_STEEL)
 	left_vbox.add_child(_preset_blurb_label)
 
-	# Right column — action buttons.
 	var right_panel: PanelContainer = PanelContainer.new()
 	right_panel.custom_minimum_size = Vector2(560.0, 0.0)
 	right_panel.add_theme_stylebox_override("panel", _make_panel_style())
@@ -162,7 +156,7 @@ func _build_body(parent: VBoxContainer) -> void:
 	right_vbox.add_child(_quit_button)
 
 	var hint: Label = Label.new()
-	hint.text = "ENTER / A — CONFIRM    ESC — QUIT"
+	hint.text = "ENTER / A - CONFIRM    ESC - QUIT"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if _palette != null:
 		_palette.style_accent_label(hint, 18, _palette.COLOR_STEEL)
@@ -234,7 +228,7 @@ func _build_settings_panel() -> void:
 	vbox.add_child(_make_slider_row("MUSIC VOLUME", -30.0, 6.0, SfxPlayer.music_volume_db, _on_music_changed))
 
 	var rebind_label: Label = Label.new()
-	rebind_label.text = "REBIND CONTROLS — COMING SOON"
+	rebind_label.text = "REBIND CONTROLS - COMING SOON"
 	rebind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if _palette != null:
 		_palette.style_accent_label(rebind_label, 22, _palette.COLOR_STEEL)
@@ -252,14 +246,12 @@ func _build_settings_panel() -> void:
 func _make_slider_row(label_text: String, min_val: float, max_val: float, current: float, on_change: Callable) -> Control:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
-
 	var label: Label = Label.new()
 	label.text = label_text
 	label.custom_minimum_size = Vector2(320.0, 0.0)
 	if _palette != null:
 		_palette.style_accent_label(label, 22, _palette.COLOR_BONE)
 	row.add_child(label)
-
 	var slider: HSlider = HSlider.new()
 	slider.min_value = min_val
 	slider.max_value = max_val
@@ -269,23 +261,22 @@ func _make_slider_row(label_text: String, min_val: float, max_val: float, curren
 	slider.custom_minimum_size = Vector2(360.0, 36.0)
 	slider.value_changed.connect(on_change)
 	row.add_child(slider)
-
 	return row
 
 func _select_preset(preset_id: String) -> void:
 	_selected_preset_id = preset_id
+	_preview_preset(preset_id)
+	_refresh_preset_button_styles()
+
+func _preview_preset(preset_id: String) -> void:
 	var data: Dictionary = MatchPreset.find(preset_id)
 	if _preset_blurb_label != null:
 		_preset_blurb_label.text = String(data.get("blurb", ""))
 
+func _refresh_preset_button_styles() -> void:
 	for btn in _preset_buttons:
-		var pid: String = ""
-		# Each button's text is the title — recover the id by matching.
-		for preset in MatchPreset.catalog():
-			if String(preset.get("title", "")) == btn.text:
-				pid = String(preset.get("id", ""))
-				break
-		_apply_preset_button_style(btn, pid == preset_id)
+		var pid: String = String(btn.get_meta("preset_id", ""))
+		_apply_preset_button_style(btn, pid == _selected_preset_id)
 
 func _apply_preset_button_style(btn: Button, is_selected: bool) -> void:
 	if _palette == null:
@@ -295,7 +286,8 @@ func _apply_preset_button_style(btn: Button, is_selected: bool) -> void:
 	_palette.style_button(btn, fill, border, _palette.COLOR_BONE, 28)
 
 func _on_preset_button_focused(preset_id: String) -> void:
-	_select_preset(preset_id)
+	_preview_preset(preset_id)
+	_refresh_preset_button_styles()
 	if has_node("/root/SfxPlayer"):
 		SfxPlayer.play(SfxPlayer.ID_UI_FOCUS)
 
