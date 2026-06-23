@@ -9,8 +9,10 @@ const PUCK_Y: float = 0.18
 @export var carry_lag_speed: float = 14.0
 @export var loose_friction: float = 3.2
 @export var board_bounce: float = 0.72
-@export var shot_speed: float = 18.0
-@export var max_loose_speed: float = 22.0
+@export var wrist_shot_speed: float = 17.0
+@export var slap_shot_speed: float = 27.0
+@export var owner_velocity_inheritance: float = 0.28
+@export var max_loose_speed: float = 32.0
 
 var _velocity: Vector3 = Vector3.ZERO
 var _owner: Node3D = null
@@ -57,16 +59,21 @@ func update_possession(target_position: Vector3, owner_velocity: Vector3, delta:
 	global_position.y = PUCK_Y
 	_velocity = Vector3(owner_velocity.x, 0.0, owner_velocity.z)
 
-func shoot(direction: Vector3, owner_velocity: Vector3) -> void:
+func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0) -> void:
 	var shot_direction: Vector3 = Vector3(direction.x, 0.0, direction.z)
 	if shot_direction.length_squared() <= 0.001:
 		shot_direction = Vector3.FORWARD
 
+	var normalized_direction: Vector3 = shot_direction.normalized()
+	var clamped_power: float = clamp(shot_power, 0.0, 1.0)
+	var shot_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power)
+	var owner_influence: Vector3 = Vector3(owner_velocity.x, 0.0, owner_velocity.z) * owner_velocity_inheritance
+
 	_is_possessed = false
 	_owner = null
-	_velocity = shot_direction.normalized() * shot_speed + Vector3(owner_velocity.x, 0.0, owner_velocity.z) * 0.28
+	_velocity = normalized_direction * shot_speed + owner_influence
 	_velocity = _velocity.limit_length(max_loose_speed)
-	global_position += shot_direction.normalized() * 0.45
+	global_position += normalized_direction * 0.52
 	global_position.y = PUCK_Y
 
 func poke_free(direction: Vector3, force: float) -> void:
