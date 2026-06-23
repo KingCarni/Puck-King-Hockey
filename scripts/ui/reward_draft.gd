@@ -19,6 +19,7 @@ var _cards: Array[Control] = []
 var _options: Array[Dictionary] = []
 var _is_open: bool = false
 var _selection_committed: bool = false
+var _focused_index: int = 0
 
 func _ready() -> void:
 	layer = 50
@@ -106,7 +107,7 @@ func _build_ui() -> void:
 
 	_hint_label = Label.new()
 	_hint_label.name = "Hint"
-	_hint_label.text = "MOUSE CLICK  -  KEYS 1 / 2 / 3  -  PAD A / X / Y"
+	_hint_label.text = "MOVE FOCUS - A/ENTER TO CONFIRM - KEYS 1/2/3 - X/Y QUICK PICK"
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_hint_label)
 
@@ -136,12 +137,15 @@ func _rebuild_cards() -> void:
 		_cards_row.add_child(card)
 		card.configure(index, id, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index])
 		card.card_chosen.connect(_on_card_chosen_from_card)
+		if card.has_signal("focus_entered"):
+			card.focus_entered.connect(_on_card_focus_changed.bind(index))
 		_cards.append(card)
 
 func show_draft() -> void:
 	_selection_committed = false
 	_is_open = true
 	visible = true
+	_focused_index = 0
 	_root.modulate.a = 0.0
 	_frame.scale = Vector2(0.86, 0.86)
 	_frame.pivot_offset = Vector2(880.0, 440.0)
@@ -158,10 +162,18 @@ func hide_draft() -> void:
 	visible = false
 
 func _focus_first_card() -> void:
+	_focus_card(0)
+
+func _focus_card(index: int) -> void:
 	if _cards.is_empty():
 		return
-	if _cards[0].has_method("grab_card_focus"):
-		_cards[0].call("grab_card_focus")
+	_focused_index = clampi(index, 0, _cards.size() - 1)
+	var card: Control = _cards[_focused_index]
+	if card.has_method("grab_card_focus"):
+		card.call("grab_card_focus")
+
+func _on_card_focus_changed(index: int) -> void:
+	_focused_index = clampi(index, 0, max(0, _cards.size() - 1))
 
 func _on_card_chosen_from_card(reported_index: int, reported_upgrade_id: String) -> void:
 	if reported_upgrade_id != "":
@@ -209,6 +221,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key_event: InputEventKey = event as InputEventKey
 		if not key_event.pressed or key_event.echo:
 			return
+		if key_event.keycode == KEY_LEFT:
+			get_viewport().set_input_as_handled()
+			_focus_card(_focused_index - 1)
+			return
+		if key_event.keycode == KEY_RIGHT:
+			get_viewport().set_input_as_handled()
+			_focus_card(_focused_index + 1)
+			return
+		if key_event.keycode == KEY_ENTER or key_event.keycode == KEY_SPACE:
+			get_viewport().set_input_as_handled()
+			_on_card_chosen_by_index(_focused_index)
+			return
 		var hotkey_index: int = _key_to_index(key_event.keycode)
 		if hotkey_index >= 0:
 			get_viewport().set_input_as_handled()
@@ -217,10 +241,31 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pad_event: InputEventJoypadButton = event as InputEventJoypadButton
 		if not pad_event.pressed:
 			return
+		if pad_event.button_index == JOY_BUTTON_DPAD_LEFT:
+			get_viewport().set_input_as_handled()
+			_focus_card(_focused_index - 1)
+			return
+		if pad_event.button_index == JOY_BUTTON_DPAD_RIGHT:
+			get_viewport().set_input_as_handled()
+			_focus_card(_focused_index + 1)
+			return
+		if pad_event.button_index == JOY_BUTTON_A:
+			get_viewport().set_input_as_handled()
+			_on_card_chosen_by_index(_focused_index)
+			return
 		var pad_index: int = _pad_to_index(pad_event.button_index)
 		if pad_index >= 0:
 			get_viewport().set_input_as_handled()
 			_on_card_chosen_by_index(pad_index)
+	elif event is InputEventJoypadMotion:
+		var motion_event: InputEventJoypadMotion = event as InputEventJoypadMotion
+		if motion_event.axis == JOY_AXIS_LEFT_X:
+			if motion_event.axis_value <= -0.75:
+				get_viewport().set_input_as_handled()
+				_focus_card(_focused_index - 1)
+			elif motion_event.axis_value >= 0.75:
+				get_viewport().set_input_as_handled()
+				_focus_card(_focused_index + 1)
 
 func _key_to_index(keycode: int) -> int:
 	if keycode == KEY_1:
@@ -232,8 +277,6 @@ func _key_to_index(keycode: int) -> int:
 	return -1
 
 func _pad_to_index(button_index: int) -> int:
-	if button_index == JOY_BUTTON_A:
-		return 0
 	if button_index == JOY_BUTTON_X:
 		return 1
 	if button_index == JOY_BUTTON_Y:
