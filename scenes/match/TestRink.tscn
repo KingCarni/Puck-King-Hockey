@@ -1,8 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://puckkingtestrink"]
+[gd_scene load_steps=12 format=3 uid="uid://puckkingtestrink"]
 
 [ext_resource type="Script" path="res://scripts/hockey/test_rink.gd" id="1_test_rink"]
 [ext_resource type="Script" path="res://scripts/hockey/player_controller.gd" id="2_player_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/puck_controller.gd" id="3_puck_controller"]
+[ext_resource type="Script" path="res://scripts/hockey/check_dummy.gd" id="4_check_dummy"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_player_body"]
 top_radius = 0.48
@@ -44,6 +45,19 @@ mesh = SubResource("CylinderMesh_player_body")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
 mesh = SubResource("BoxMesh_direction_marker")
 
+[node name="CheckDummy" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.72, 0)
+script = ExtResource("4_check_dummy")
+
+[node name="VisualRoot" type="Node3D" parent="CheckDummy"]
+
+[node name="BodyMesh" type="MeshInstance3D" parent="CheckDummy/VisualRoot"]
+mesh = SubResource("CylinderMesh_player_body")
+
+[node name="DirectionMarker" type="MeshInstance3D" parent="CheckDummy/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
+mesh = SubResource("BoxMesh_direction_marker")
+
 [node name="Puck" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
 script = ExtResource("3_puck_controller")
@@ -67,7 +81,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 [node name="IsometricCamera" type="Camera3D" parent="CameraRig"]
 current = true
 projection = 1
-size = 36.0
+size = 31.0
 near = 0.05
 far = 200.0
 
