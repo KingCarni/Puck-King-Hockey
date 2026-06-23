@@ -1,10 +1,5 @@
 extends CanvasLayer
 
-# Reward Draft modal.
-# - Three big arcade upgrade cards.
-# - Mouse, keyboard (1/2/3), and controller (A/X/Y, D-pad, focus) support.
-# - Emits "upgrade_selected(index, upgrade_id)" when the player picks one.
-
 signal upgrade_selected(index: int, upgrade_id: String)
 
 const UpgradeCardScript: GDScript = preload("res://scripts/ui/upgrade_card.gd")
@@ -23,6 +18,7 @@ var _cards_row: HBoxContainer = null
 var _cards: Array[Control] = []
 var _options: Array[Dictionary] = []
 var _is_open: bool = false
+var _selection_committed: bool = false
 
 func _ready() -> void:
 	layer = 50
@@ -75,7 +71,6 @@ func _build_ui() -> void:
 	vbox.add_theme_constant_override("separation", 18)
 	_frame.add_child(vbox)
 
-	# Header banner.
 	var header_panel: PanelContainer = PanelContainer.new()
 	header_panel.name = "HeaderBanner"
 	var header_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -98,7 +93,7 @@ func _build_ui() -> void:
 
 	_subtitle_label = Label.new()
 	_subtitle_label.name = "Subtitle"
-	_subtitle_label.text = "PICK ONE — KEEP IT FOR THE MATCH"
+	_subtitle_label.text = "PICK ONE - KEEP IT FOR THE MATCH"
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_subtitle_label)
 
@@ -111,7 +106,7 @@ func _build_ui() -> void:
 
 	_hint_label = Label.new()
 	_hint_label.name = "Hint"
-	_hint_label.text = "MOUSE CLICK  •  KEYS 1 / 2 / 3  •  PAD A / X / Y"
+	_hint_label.text = "MOUSE CLICK  -  KEYS 1 / 2 / 3  -  PAD A / X / Y"
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_hint_label)
 
@@ -125,8 +120,6 @@ func set_options(options: Array) -> void:
 	for option in options:
 		if option is Dictionary:
 			_options.append(option)
-
-	# Re-build cards to match option count.
 	_rebuild_cards()
 
 func _rebuild_cards() -> void:
@@ -136,26 +129,20 @@ func _rebuild_cards() -> void:
 
 	for index in range(_options.size()):
 		var option: Dictionary = _options[index]
-		var card: Control = Control.new()
-		card.set_script(UpgradeCardScript)
+		var card: Control = UpgradeCardScript.new()
+		card.set_meta("reward_index", index)
 		_cards_row.add_child(card)
-		card.configure(
-			index,
-			String(option.get("title", "UPGRADE")),
-			String(option.get("description", "")),
-			HOTKEYS[index] if index < HOTKEYS.size() else str(index + 1),
-			CONTROLLER_BUTTONS[index] if index < CONTROLLER_BUTTONS.size() else "—"
-		)
-		card.card_chosen.connect(_on_card_chosen)
+		card.configure(index, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index])
+		card.card_chosen.connect(_on_card_chosen_from_card.bind(card))
 		_cards.append(card)
 
 func show_draft() -> void:
+	_selection_committed = false
 	_is_open = true
 	visible = true
 	_root.modulate.a = 0.0
 	_frame.scale = Vector2(0.86, 0.86)
 	_frame.pivot_offset = Vector2(880.0, 440.0)
-
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(_root, "modulate:a", 1.0, 0.18)
@@ -173,35 +160,37 @@ func _focus_first_card() -> void:
 	if _cards[0].has_method("grab_card_focus"):
 		_cards[0].call("grab_card_focus")
 
+func _on_card_chosen_from_card(_reported_index: int, card: Control) -> void:
+	_on_card_chosen(int(card.get_meta("reward_index", _reported_index)))
+
 func _on_card_chosen(index: int) -> void:
-	if not _is_open:
+	if not _is_open or _selection_committed:
 		return
 	if index < 0 or index >= _options.size():
 		return
+	_selection_committed = true
 	var option: Dictionary = _options[index]
 	emit_signal("upgrade_selected", index, String(option.get("id", "")))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_open:
 		return
-
 	if event is InputEventKey:
 		var key_event: InputEventKey = event as InputEventKey
 		if not key_event.pressed or key_event.echo:
 			return
 		var hotkey_index: int = _key_to_index(key_event.keycode)
 		if hotkey_index >= 0:
-			_on_card_chosen(hotkey_index)
 			get_viewport().set_input_as_handled()
-
+			_on_card_chosen(hotkey_index)
 	elif event is InputEventJoypadButton:
 		var pad_event: InputEventJoypadButton = event as InputEventJoypadButton
 		if not pad_event.pressed:
 			return
 		var pad_index: int = _pad_to_index(pad_event.button_index)
 		if pad_index >= 0:
-			_on_card_chosen(pad_index)
 			get_viewport().set_input_as_handled()
+			_on_card_chosen(pad_index)
 
 func _key_to_index(keycode: int) -> int:
 	if keycode == KEY_1:
