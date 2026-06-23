@@ -7,6 +7,20 @@ const MENU_PNG_PATH: String = "res://assets/ui/title_screen/pkh_main_menu.png"
 const LOGO_WEBP_PATH: String = "res://assets/ui/title_screen/pkh_logo_splash.webp"
 const LOGO_PNG_PATH: String = "res://assets/ui/title_screen/pkh_logo_splash.png"
 
+# Calibrated against the approved 16:9 generated menu art.
+# These are normalized viewport anchors, not pixels.
+const MODE_X_LEFT: float = 0.080
+const MODE_X_RIGHT: float = 0.430
+const MODE_Y_START: float = 0.386
+const MODE_ROW_HEIGHT: float = 0.066
+const MODE_ROW_STEP: float = 0.092
+
+const ACTION_X_LEFT: float = 0.545
+const ACTION_X_RIGHT: float = 0.872
+const ACTION_Y_START: float = 0.386
+const ACTION_ROW_HEIGHT: float = 0.066
+const ACTION_ROW_STEP: float = 0.092
+
 var _palette: Node = null
 var _using_menu_art: bool = false
 var _play_button: Button = null
@@ -77,25 +91,16 @@ func _build_backdrop() -> void:
 	add_child(blue_wash)
 
 func _build_art_hotspots() -> void:
-	# The generated menu concept already contains the visible logo/buttons.
-	# These invisible/low-alpha controls sit over the art so the screen is actually playable.
 	_build_mode_hotspots()
 	_build_action_hotspots()
-	_build_mode_detail_overlay()
 
 func _build_mode_hotspots() -> void:
 	var presets: Array = MatchPreset.catalog()
-	var y_start: float = 0.390
-	var row_height: float = 0.075
-	var row_gap: float = 0.018
 	for index in range(presets.size()):
 		var preset: Dictionary = presets[index]
 		var preset_id: String = String(preset.get("id", ""))
 		var btn: Button = _make_hotspot_button(preset_id)
-		btn.anchor_left = 0.188
-		btn.anchor_right = 0.455
-		btn.anchor_top = y_start + float(index) * (row_height + row_gap)
-		btn.anchor_bottom = btn.anchor_top + row_height
+		_set_anchor_box(btn, MODE_X_LEFT, MODE_X_RIGHT, MODE_Y_START + float(index) * MODE_ROW_STEP, MODE_ROW_HEIGHT)
 		btn.set_meta("preset_id", preset_id)
 		btn.pressed.connect(_on_preset_button_pressed.bind(preset_id))
 		btn.focus_entered.connect(_on_preset_button_focused.bind(preset_id))
@@ -104,30 +109,29 @@ func _build_mode_hotspots() -> void:
 		_preset_buttons.append(btn)
 
 func _build_action_hotspots() -> void:
-	var y_start: float = 0.390
-	var row_height: float = 0.075
-	var row_gap: float = 0.018
 	_play_button = _make_hotspot_button("play")
-	_settings_button = _make_hotspot_button("settings")
 	_stats_button = _make_hotspot_button("stats")
 	_extras_button = _make_hotspot_button("extras")
+	_settings_button = _make_hotspot_button("settings")
 	_quit_button = _make_hotspot_button("quit")
 
 	var buttons: Array[Button] = [_play_button, _stats_button, _extras_button, _settings_button, _quit_button]
 	var callbacks: Array[Callable] = [_on_play_pressed, _on_stats_pressed, _on_extras_pressed, _on_settings_pressed, _on_quit_pressed]
 	for index in range(buttons.size()):
 		var btn: Button = buttons[index]
-		btn.anchor_left = 0.565
-		btn.anchor_right = 0.820
-		btn.anchor_top = y_start + float(index) * (row_height + row_gap)
-		btn.anchor_bottom = btn.anchor_top + row_height
+		_set_anchor_box(btn, ACTION_X_LEFT, ACTION_X_RIGHT, ACTION_Y_START + float(index) * ACTION_ROW_STEP, ACTION_ROW_HEIGHT)
 		btn.pressed.connect(callbacks[index])
 		add_child(btn)
 
-func _build_mode_detail_overlay() -> void:
-	# Reserved for later. The approved concept image currently has no detail panel.
-	# PKH-23 will replace the baked image with separated assets and a live detail card.
-	pass
+func _set_anchor_box(node: Control, left: float, right: float, top: float, height: float) -> void:
+	node.anchor_left = left
+	node.anchor_right = right
+	node.anchor_top = top
+	node.anchor_bottom = top + height
+	node.offset_left = 0.0
+	node.offset_right = 0.0
+	node.offset_top = 0.0
+	node.offset_bottom = 0.0
 
 func _build_fallback_menu() -> void:
 	var root_vbox: VBoxContainer = VBoxContainer.new()
@@ -215,9 +219,9 @@ func _make_hotspot_button(node_name: String) -> Button:
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0))
-	btn.add_theme_stylebox_override("hover", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.08), Color(1.0, 0.78, 0.10, 0.85), 4))
-	btn.add_theme_stylebox_override("focus", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.10), Color(1.0, 0.92, 0.30, 1.0), 5))
-	btn.add_theme_stylebox_override("pressed", _make_hotspot_style(Color(1.0, 0.20, 0.22, 0.16), Color(1.0, 0.92, 0.30, 1.0), 5))
+	btn.add_theme_stylebox_override("hover", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.025), Color(1.0, 0.78, 0.10, 0.45), 2))
+	btn.add_theme_stylebox_override("focus", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.035), Color(1.0, 0.92, 0.30, 0.70), 3))
+	btn.add_theme_stylebox_override("pressed", _make_hotspot_style(Color(1.0, 0.20, 0.22, 0.08), Color(1.0, 0.92, 0.30, 0.80), 3))
 	return btn
 
 func _make_visible_button(text: String, is_mode: bool) -> Button:
@@ -247,13 +251,13 @@ func _make_hotspot_style(fill: Color, border: Color, border_width: int) -> Style
 	style.bg_color = fill
 	style.border_color = border
 	style.set_border_width_all(border_width)
-	style.set_corner_radius_all(8)
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.55)
-	style.shadow_size = 10
-	style.content_margin_left = 20
-	style.content_margin_right = 20
-	style.content_margin_top = 10
-	style.content_margin_bottom = 10
+	style.set_corner_radius_all(6)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+	style.shadow_size = 6
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
 	return style
 
 func _build_settings_panel() -> void:
@@ -337,9 +341,9 @@ func _refresh_preset_button_styles() -> void:
 
 func _apply_art_button_style(btn: Button, is_selected: bool, is_previewed: bool) -> void:
 	if is_selected:
-		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.08, 0.10, 0.18), Color(1.0, 0.78, 0.10, 0.90), 4))
+		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.08, 0.10, 0.055), Color(1.0, 0.78, 0.10, 0.58), 2))
 	elif is_previewed:
-		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.09), Color(1.0, 0.78, 0.10, 0.60), 3))
+		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.025), Color(1.0, 0.78, 0.10, 0.38), 2))
 	else:
 		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0))
 
