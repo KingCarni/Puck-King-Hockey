@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3 uid="uid://puckkingtestrink"]
+
+[ext_resource type="Script" path="res://scripts/hockey/test_rink.gd" id="1_test_rink"]
+
+[node name="TestRink" type="Node3D"]
+script = ExtResource("1_test_rink")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="SpawnPoints" type="Node3D" parent="."]
+
+[node name="HomeSpawn" type="Marker3D" parent="SpawnPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.2, 0)
+
+[node name="AwaySpawn" type="Marker3D" parent="SpawnPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.2, 0)
+
+[node name="PuckSpawn" type="Marker3D" parent="SpawnPoints"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 18, 22)
+
+[node name="IsometricCamera" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.906308, 0.422618, 0, -0.422618, 0.906308, 0, 0, 0)
+current = true
+fov = 45.0
+size = 24.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.353553, 0.612372, 0, 0.866025, 0.5, -0.707107, -0.353553, 0.612372, 0, 12, 0)
+light_energy = 2.0
+shadow_enabled = true
+
+[node name="Environment" type="WorldEnvironment" parent="."]
