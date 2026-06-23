@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-signal upgrade_selected(index: int, upgrade_id: String)
+signal upgrade_selected(upgrade_id: String)
 
 const UpgradeCardScript: GDScript = preload("res://scripts/ui/upgrade_card.gd")
 
@@ -129,11 +129,13 @@ func _rebuild_cards() -> void:
 
 	for index in range(_options.size()):
 		var option: Dictionary = _options[index]
+		var id: String = String(option.get("id", ""))
 		var card: Control = UpgradeCardScript.new()
 		card.set_meta("reward_index", index)
+		card.set_meta("upgrade_id", id)
 		_cards_row.add_child(card)
-		card.configure(index, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index])
-		card.card_chosen.connect(_on_card_chosen_from_card.bind(card))
+		card.configure(index, id, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index])
+		card.card_chosen.connect(_on_card_chosen_from_card)
 		_cards.append(card)
 
 func show_draft() -> void:
@@ -160,17 +162,35 @@ func _focus_first_card() -> void:
 	if _cards[0].has_method("grab_card_focus"):
 		_cards[0].call("grab_card_focus")
 
-func _on_card_chosen_from_card(_reported_index: int, card: Control) -> void:
-	_on_card_chosen(int(card.get_meta("reward_index", _reported_index)))
+func _on_card_chosen_from_card(reported_index: int, reported_upgrade_id: String) -> void:
+	if reported_upgrade_id != "":
+		_on_card_chosen_by_id(reported_upgrade_id)
+		return
+	_on_card_chosen_by_index(reported_index)
 
-func _on_card_chosen(index: int) -> void:
+func _on_card_chosen_by_index(index: int) -> void:
 	if not _is_open or _selection_committed:
 		return
 	if index < 0 or index >= _options.size():
 		return
-	_selection_committed = true
 	var option: Dictionary = _options[index]
-	emit_signal("upgrade_selected", index, String(option.get("id", "")))
+	_on_card_chosen_by_id(String(option.get("id", "")))
+
+func _on_card_chosen_by_id(upgrade_id: String) -> void:
+	if not _is_open or _selection_committed:
+		return
+	if upgrade_id == "":
+		return
+	if not _has_upgrade_id(upgrade_id):
+		return
+	_selection_committed = true
+	emit_signal("upgrade_selected", upgrade_id)
+
+func _has_upgrade_id(upgrade_id: String) -> bool:
+	for option in _options:
+		if String(option.get("id", "")) == upgrade_id:
+			return true
+	return false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_open:
@@ -182,7 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var hotkey_index: int = _key_to_index(key_event.keycode)
 		if hotkey_index >= 0:
 			get_viewport().set_input_as_handled()
-			_on_card_chosen(hotkey_index)
+			_on_card_chosen_by_index(hotkey_index)
 	elif event is InputEventJoypadButton:
 		var pad_event: InputEventJoypadButton = event as InputEventJoypadButton
 		if not pad_event.pressed:
@@ -190,7 +210,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var pad_index: int = _pad_to_index(pad_event.button_index)
 		if pad_index >= 0:
 			get_viewport().set_input_as_handled()
-			_on_card_chosen(pad_index)
+			_on_card_chosen_by_index(pad_index)
 
 func _key_to_index(keycode: int) -> int:
 	if keycode == KEY_1:
