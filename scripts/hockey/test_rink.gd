@@ -329,6 +329,7 @@ func _update_upgrade_display() -> void:
 func _build_test_rink() -> void:
 	_create_floor_backdrop()
 	_create_ice_surface()
+	_create_ice_surface_details()
 	_create_zone_tints()
 	_create_rink_lines()
 	_create_faceoff_markings()
@@ -345,8 +346,84 @@ func _create_floor_backdrop() -> void:
 
 func _create_ice_surface() -> void:
 	var ice: MeshInstance3D = _create_box("IceSurface", Vector3(RINK_LENGTH, ICE_THICKNESS, RINK_WIDTH), Vector3.ZERO)
-	ice.material_override = _make_material(Color(0.78, 0.94, 1.0, 1.0), 0.05, 0.18)
+	ice.material_override = _make_material(Color(0.72, 0.92, 0.98, 1.0), 0.02, 0.10)
 	world.add_child(ice)
+
+func _create_ice_surface_details() -> void:
+	_create_ice_under_panels()
+	_create_center_ice_badge()
+	_create_ice_scratch_marks()
+	_create_ice_edge_glow()
+
+func _create_ice_under_panels() -> void:
+	var panel_material: StandardMaterial3D = _make_material(Color(0.92, 0.99, 1.0, 0.22), 0.0, 0.20)
+	var tint_material: StandardMaterial3D = _make_material(Color(0.30, 0.66, 1.0, 0.11), 0.0, 0.30)
+	var lane_width: float = RINK_WIDTH / 6.0
+
+	for index: int in range(6):
+		var z_position: float = -RINK_WIDTH * 0.5 + lane_width * 0.5 + float(index) * lane_width
+		var panel: MeshInstance3D = _create_box("IcePanel%02d" % index, Vector3(RINK_LENGTH - 1.6, 0.012, lane_width - 0.10), Vector3(0.0, LINE_HEIGHT - 0.050, z_position))
+		panel.material_override = panel_material if index % 2 == 0 else tint_material
+		world.add_child(panel)
+
+func _create_center_ice_badge() -> void:
+	var badge_material: StandardMaterial3D = _make_material(Color(0.02, 0.025, 0.035, 0.18), 0.0, 0.40)
+	var gold_material: StandardMaterial3D = _make_material(Color(1.0, 0.72, 0.08, 0.34), 0.0, 0.36)
+	var red_material: StandardMaterial3D = _make_material(Color(0.95, 0.05, 0.06, 0.24), 0.0, 0.42)
+
+	var badge_back: MeshInstance3D = _create_box("CenterIceBadgeBack", Vector3(5.2, 0.014, 2.1), Vector3(0.0, LINE_HEIGHT - 0.035, 0.0))
+	badge_back.material_override = badge_material
+	world.add_child(badge_back)
+
+	var crown_bar: MeshInstance3D = _create_box("CenterIceCrownBar", Vector3(3.6, 0.016, 0.18), Vector3(0.0, LINE_HEIGHT - 0.025, -0.48))
+	crown_bar.material_override = gold_material
+	world.add_child(crown_bar)
+
+	for index: int in range(3):
+		var x_position: float = -0.9 + float(index) * 0.9
+		var crown_tip: MeshInstance3D = _create_box("CenterIceCrownTip%02d" % index, Vector3(0.28, 0.016, 0.72), Vector3(x_position, LINE_HEIGHT - 0.020, -0.78))
+		crown_tip.rotation.y = deg_to_rad(16.0 * (float(index) - 1.0))
+		crown_tip.material_override = gold_material
+		world.add_child(crown_tip)
+
+	var hell_slash: MeshInstance3D = _create_box("CenterIceHellSlash", Vector3(3.8, 0.016, 0.16), Vector3(0.0, LINE_HEIGHT - 0.018, 0.48))
+	hell_slash.rotation.y = deg_to_rad(-8.0)
+	hell_slash.material_override = red_material
+	world.add_child(hell_slash)
+
+func _create_ice_scratch_marks() -> void:
+	var scratch_material: StandardMaterial3D = _make_material(Color(1.0, 1.0, 1.0, 0.34), 0.0, 0.82)
+	var blue_scratch_material: StandardMaterial3D = _make_material(Color(0.64, 0.88, 1.0, 0.22), 0.0, 0.82)
+	var scratches: Array[Dictionary] = [
+		{"pos": Vector3(-12.0, LINE_HEIGHT - 0.010, -6.8), "size": Vector3(2.4, 0.010, 0.045), "rot": -13.0, "blue": false},
+		{"pos": Vector3(-8.6, LINE_HEIGHT - 0.009, 2.8), "size": Vector3(1.7, 0.010, 0.040), "rot": 24.0, "blue": true},
+		{"pos": Vector3(-5.1, LINE_HEIGHT - 0.008, -2.1), "size": Vector3(1.3, 0.010, 0.035), "rot": -32.0, "blue": false},
+		{"pos": Vector3(-1.7, LINE_HEIGHT - 0.009, 6.0), "size": Vector3(2.2, 0.010, 0.045), "rot": 11.0, "blue": true},
+		{"pos": Vector3(2.6, LINE_HEIGHT - 0.010, -5.8), "size": Vector3(1.9, 0.010, 0.040), "rot": -21.0, "blue": false},
+		{"pos": Vector3(6.8, LINE_HEIGHT - 0.009, 1.4), "size": Vector3(2.6, 0.010, 0.045), "rot": 18.0, "blue": true},
+		{"pos": Vector3(10.3, LINE_HEIGHT - 0.008, -2.9), "size": Vector3(1.6, 0.010, 0.035), "rot": -9.0, "blue": false},
+		{"pos": Vector3(13.0, LINE_HEIGHT - 0.010, 6.5), "size": Vector3(2.0, 0.010, 0.045), "rot": 31.0, "blue": true},
+		{"pos": Vector3(-13.7, LINE_HEIGHT - 0.006, 0.9), "size": Vector3(1.2, 0.010, 0.030), "rot": 3.0, "blue": false},
+		{"pos": Vector3(13.8, LINE_HEIGHT - 0.006, -0.7), "size": Vector3(1.2, 0.010, 0.030), "rot": -3.0, "blue": false}
+	]
+
+	for index: int in range(scratches.size()):
+		var scratch_data: Dictionary = scratches[index]
+		var scratch_position: Vector3 = scratch_data["pos"]
+		var scratch_size: Vector3 = scratch_data["size"]
+		var scratch_rotation: float = float(scratch_data["rot"])
+		var use_blue: bool = bool(scratch_data["blue"])
+		var scratch: MeshInstance3D = _create_box("IceScratch%02d" % index, scratch_size, scratch_position)
+		scratch.rotation.y = deg_to_rad(scratch_rotation)
+		scratch.material_override = blue_scratch_material if use_blue else scratch_material
+		world.add_child(scratch)
+
+func _create_ice_edge_glow() -> void:
+	var edge_material: StandardMaterial3D = _make_material(Color(0.55, 0.90, 1.0, 0.16), 0.0, 0.32)
+	_create_flat_line("TopIceGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.20), Vector3(0.0, LINE_HEIGHT - 0.012, -RINK_WIDTH * 0.5 + 0.45), Color(0.55, 0.90, 1.0, 0.16), edge_material)
+	_create_flat_line("BottomIceGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.20), Vector3(0.0, LINE_HEIGHT - 0.012, RINK_WIDTH * 0.5 - 0.45), Color(0.55, 0.90, 1.0, 0.16), edge_material)
+	_create_flat_line("LeftIceGlow", Vector3(0.20, 0.012, RINK_WIDTH - 1.0), Vector3(-RINK_LENGTH * 0.5 + 0.45, LINE_HEIGHT - 0.012, 0.0), Color(0.55, 0.90, 1.0, 0.16), edge_material)
+	_create_flat_line("RightIceGlow", Vector3(0.20, 0.012, RINK_WIDTH - 1.0), Vector3(RINK_LENGTH * 0.5 - 0.45, LINE_HEIGHT - 0.012, 0.0), Color(0.55, 0.90, 1.0, 0.16), edge_material)
 
 func _create_zone_tints() -> void:
 	var home_crease: MeshInstance3D = _create_box("HomeCrease", Vector3(2.3, 0.02, 4.8), Vector3(-RINK_LENGTH * 0.5 + 1.75, LINE_HEIGHT, 0.0))
