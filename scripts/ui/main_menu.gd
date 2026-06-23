@@ -8,21 +8,23 @@ const LOGO_WEBP_PATH: String = "res://assets/ui/title_screen/pkh_logo_splash.web
 const LOGO_PNG_PATH: String = "res://assets/ui/title_screen/pkh_logo_splash.png"
 
 # Calibrated against the approved 16:9 generated menu art.
-# These are normalized viewport anchors, not pixels.
-const MODE_X_LEFT: float = 0.080
-const MODE_X_RIGHT: float = 0.430
-const MODE_Y_START: float = 0.386
-const MODE_ROW_HEIGHT: float = 0.066
+# These are normalized anchors inside the displayed art area, not raw viewport pixels.
+const ART_BOTTOM_SAFE_MARGIN: float = 72.0
+const MODE_X_LEFT: float = 0.185
+const MODE_X_RIGHT: float = 0.455
+const MODE_Y_START: float = 0.390
+const MODE_ROW_HEIGHT: float = 0.062
 const MODE_ROW_STEP: float = 0.092
 
-const ACTION_X_LEFT: float = 0.545
-const ACTION_X_RIGHT: float = 0.872
-const ACTION_Y_START: float = 0.386
-const ACTION_ROW_HEIGHT: float = 0.066
+const ACTION_X_LEFT: float = 0.555
+const ACTION_X_RIGHT: float = 0.812
+const ACTION_Y_START: float = 0.390
+const ACTION_ROW_HEIGHT: float = 0.062
 const ACTION_ROW_STEP: float = 0.092
 
 var _palette: Node = null
 var _using_menu_art: bool = false
+var _art_container: Control = null
 var _play_button: Button = null
 var _settings_button: Button = null
 var _stats_button: Button = null
@@ -52,9 +54,22 @@ func _build_ui() -> void:
 	_build_settings_panel()
 
 func _build_backdrop() -> void:
+	var base: ColorRect = ColorRect.new()
+	base.name = "MenuBlackBase"
+	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	base.color = Color(0.0, 0.0, 0.0, 1.0)
+	add_child(base)
+
 	var texture: Texture2D = _load_menu_texture()
 	if texture != null:
 		_using_menu_art = true
+		_art_container = Control.new()
+		_art_container.name = "GeneratedMenuArtContainer"
+		_art_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_art_container.offset_bottom = -ART_BOTTOM_SAFE_MARGIN
+		_art_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_art_container)
+
 		var art: TextureRect = TextureRect.new()
 		art.name = "GeneratedMenuArt"
 		art.texture = texture
@@ -62,16 +77,10 @@ func _build_backdrop() -> void:
 		art.stretch_mode = TextureRect.STRETCH_SCALE
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(art)
+		_art_container.add_child(art)
 		return
 
 	_using_menu_art = false
-	var base: ColorRect = ColorRect.new()
-	base.name = "FallbackBackdrop"
-	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	base.color = Color(0.018, 0.018, 0.026, 1.0)
-	add_child(base)
-
 	var red_wash: ColorRect = ColorRect.new()
 	red_wash.name = "RedWash"
 	red_wash.anchor_left = 0.0
@@ -105,7 +114,7 @@ func _build_mode_hotspots() -> void:
 		btn.pressed.connect(_on_preset_button_pressed.bind(preset_id))
 		btn.focus_entered.connect(_on_preset_button_focused.bind(preset_id))
 		btn.mouse_entered.connect(_on_preset_button_focused.bind(preset_id))
-		add_child(btn)
+		_get_art_parent().add_child(btn)
 		_preset_buttons.append(btn)
 
 func _build_action_hotspots() -> void:
@@ -121,7 +130,12 @@ func _build_action_hotspots() -> void:
 		var btn: Button = buttons[index]
 		_set_anchor_box(btn, ACTION_X_LEFT, ACTION_X_RIGHT, ACTION_Y_START + float(index) * ACTION_ROW_STEP, ACTION_ROW_HEIGHT)
 		btn.pressed.connect(callbacks[index])
-		add_child(btn)
+		_get_art_parent().add_child(btn)
+
+func _get_art_parent() -> Control:
+	if _art_container != null:
+		return _art_container
+	return self
 
 func _set_anchor_box(node: Control, left: float, right: float, top: float, height: float) -> void:
 	node.anchor_left = left
@@ -219,9 +233,9 @@ func _make_hotspot_button(node_name: String) -> Button:
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0))
-	btn.add_theme_stylebox_override("hover", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.025), Color(1.0, 0.78, 0.10, 0.45), 2))
-	btn.add_theme_stylebox_override("focus", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.035), Color(1.0, 0.92, 0.30, 0.70), 3))
-	btn.add_theme_stylebox_override("pressed", _make_hotspot_style(Color(1.0, 0.20, 0.22, 0.08), Color(1.0, 0.92, 0.30, 0.80), 3))
+	btn.add_theme_stylebox_override("hover", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.012), Color(1.0, 0.78, 0.10, 0.28), 1))
+	btn.add_theme_stylebox_override("focus", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.018), Color(1.0, 0.92, 0.30, 0.42), 2))
+	btn.add_theme_stylebox_override("pressed", _make_hotspot_style(Color(1.0, 0.20, 0.22, 0.045), Color(1.0, 0.92, 0.30, 0.55), 2))
 	return btn
 
 func _make_visible_button(text: String, is_mode: bool) -> Button:
@@ -341,9 +355,9 @@ func _refresh_preset_button_styles() -> void:
 
 func _apply_art_button_style(btn: Button, is_selected: bool, is_previewed: bool) -> void:
 	if is_selected:
-		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.08, 0.10, 0.055), Color(1.0, 0.78, 0.10, 0.58), 2))
+		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.08, 0.10, 0.035), Color(1.0, 0.78, 0.10, 0.36), 1))
 	elif is_previewed:
-		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.025), Color(1.0, 0.78, 0.10, 0.38), 2))
+		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(1.0, 0.78, 0.10, 0.016), Color(1.0, 0.78, 0.10, 0.24), 1))
 	else:
 		btn.add_theme_stylebox_override("normal", _make_hotspot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0), 0))
 
