@@ -7,7 +7,7 @@ const SPLASH_DURATION: float = 2.25
 
 var _elapsed: float = 0.0
 var _can_skip: bool = false
-var _logo: TextureRect = null
+var _logo_node: CanvasItem = null
 var _prompt: Label = null
 
 func _ready() -> void:
@@ -49,18 +49,19 @@ func _build_screen() -> void:
 
 	var texture: Texture2D = _load_logo_texture()
 	if texture != null:
-		_logo = TextureRect.new()
-		_logo.name = "LogoSplash"
-		_logo.texture = texture
-		_logo.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_logo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_logo.offset_left = 260.0
-		_logo.offset_right = -260.0
-		_logo.offset_top = 150.0
-		_logo.offset_bottom = -210.0
-		_logo.modulate.a = 0.0
-		add_child(_logo)
+		var logo: TextureRect = TextureRect.new()
+		logo.name = "LogoSplash"
+		logo.texture = texture
+		logo.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		logo.offset_left = 260.0
+		logo.offset_right = -260.0
+		logo.offset_top = 150.0
+		logo.offset_bottom = -210.0
+		logo.modulate.a = 0.0
+		_logo_node = logo
+		add_child(logo)
 	else:
 		var fallback: Label = Label.new()
 		fallback.name = "FallbackLogo"
@@ -70,7 +71,7 @@ func _build_screen() -> void:
 		fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		fallback.add_theme_font_size_override("font_size", 116)
 		fallback.modulate = Color(1.0, 0.95, 0.82, 0.0)
-		_logo = fallback as TextureRect
+		_logo_node = fallback
 		add_child(fallback)
 
 	_prompt = Label.new()
@@ -90,8 +91,8 @@ func _build_screen() -> void:
 func _fade_in() -> void:
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	if _logo != null:
-		tween.tween_property(_logo, "modulate:a", 1.0, 0.45)
+	if _logo_node != null:
+		tween.tween_property(_logo_node, "modulate:a", 1.0, 0.45)
 	if _prompt != null:
 		tween.tween_property(_prompt, "modulate:a", 0.70, 0.85).set_delay(0.80)
 
