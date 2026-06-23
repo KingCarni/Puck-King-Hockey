@@ -223,9 +223,9 @@ func _build_settings_panel() -> void:
 		_palette.style_display_label(title, 64, _palette.COLOR_HOT_GOLD)
 	vbox.add_child(title)
 
-	vbox.add_child(_make_slider_row("MASTER VOLUME", -20.0, 0.0, SfxPlayer.master_volume_db, _on_master_changed))
-	vbox.add_child(_make_slider_row("SFX VOLUME", -30.0, 6.0, SfxPlayer.sfx_volume_db, _on_sfx_changed))
-	vbox.add_child(_make_slider_row("MUSIC VOLUME", -30.0, 6.0, SfxPlayer.music_volume_db, _on_music_changed))
+	vbox.add_child(_make_slider_row("MASTER VOLUME", -20.0, 0.0, _get_audio_volume("master_volume_db", 0.0), _on_master_changed))
+	vbox.add_child(_make_slider_row("SFX VOLUME", -30.0, 6.0, _get_audio_volume("sfx_volume_db", -4.0), _on_sfx_changed))
+	vbox.add_child(_make_slider_row("MUSIC VOLUME", -30.0, 6.0, _get_audio_volume("music_volume_db", -8.0), _on_music_changed))
 
 	var rebind_label: Label = Label.new()
 	rebind_label.text = "REBIND CONTROLS - COMING SOON"
@@ -288,50 +288,46 @@ func _apply_preset_button_style(btn: Button, is_selected: bool) -> void:
 func _on_preset_button_focused(preset_id: String) -> void:
 	_preview_preset(preset_id)
 	_refresh_preset_button_styles()
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_FOCUS)
+	_play_sfx("ui_focus")
 
 func _on_preset_button_pressed(preset_id: String) -> void:
 	_select_preset(preset_id)
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	_play_sfx("ui_click")
 
 func _on_play_pressed() -> void:
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	_play_sfx("ui_click")
 	var preset: Dictionary = MatchPreset.find(_selected_preset_id)
 	if _selected_preset_id == MatchPreset.ID_ADVENTURE:
 		preset = MatchPreset.roll_adventure()
-	MatchSession.set_preset(preset)
+	var match_session: Node = get_node_or_null("/root/MatchSession")
+	if match_session != null and match_session.has_method("set_preset"):
+		match_session.call("set_preset", preset)
 	get_tree().change_scene_to_file(MATCH_SCENE_PATH)
 
 func _on_settings_pressed() -> void:
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	_play_sfx("ui_click")
 	_is_settings_open = true
 	_settings_panel.visible = true
 
 func _on_settings_close() -> void:
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	_play_sfx("ui_click")
 	_is_settings_open = false
 	_settings_panel.visible = false
 	_play_button.grab_focus()
 
 func _on_quit_pressed() -> void:
-	if has_node("/root/SfxPlayer"):
-		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	_play_sfx("ui_click")
 	get_tree().quit()
 
 func _on_master_changed(v: float) -> void:
-	SfxPlayer.set_master_volume(v)
+	_call_sfx_method("set_master_volume", [v])
 
 func _on_sfx_changed(v: float) -> void:
-	SfxPlayer.set_sfx_volume(v)
-	SfxPlayer.play(SfxPlayer.ID_UI_FOCUS)
+	_call_sfx_method("set_sfx_volume", [v])
+	_play_sfx("ui_focus")
 
 func _on_music_changed(v: float) -> void:
-	SfxPlayer.set_music_volume(v)
+	_call_sfx_method("set_music_volume", [v])
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_settings_open:
@@ -342,3 +338,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_on_quit_pressed()
 		get_viewport().set_input_as_handled()
+
+func _get_audio_volume(property_name: String, default_value: float) -> float:
+	var sfx: Node = get_node_or_null("/root/SfxPlayer")
+	if sfx == null:
+		return default_value
+	return float(sfx.get(property_name))
+
+func _play_sfx(sfx_id: String) -> void:
+	_call_sfx_method("play", [sfx_id])
+
+func _call_sfx_method(method_name: String, args: Array) -> void:
+	var sfx: Node = get_node_or_null("/root/SfxPlayer")
+	if sfx == null or not sfx.has_method(method_name):
+		return
+	sfx.callv(method_name, args)
