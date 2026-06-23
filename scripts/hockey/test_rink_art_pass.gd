@@ -4,9 +4,24 @@ const ICE_TEXTURE_WEBP_PATH: String = "res://assets/art/rink/pkh_ice_surface.web
 const ICE_TEXTURE_PNG_PATH: String = "res://assets/art/rink/pkh_ice_surface.png"
 
 func _create_ice_surface() -> void:
-	var ice: MeshInstance3D = _create_box("IceSurface", Vector3(RINK_LENGTH, ICE_THICKNESS, RINK_WIDTH), Vector3.ZERO)
-	ice.material_override = _make_ice_surface_material()
-	world.add_child(ice)
+	var base_ice: MeshInstance3D = _create_box("IceSurfaceBase", Vector3(RINK_LENGTH, ICE_THICKNESS, RINK_WIDTH), Vector3.ZERO)
+	base_ice.material_override = _make_material(Color(0.86, 0.97, 1.0, 1.0), 0.0, 0.24)
+	world.add_child(base_ice)
+
+	var texture: Texture2D = _load_ice_texture()
+	if texture == null:
+		return
+
+	var ice_plane: MeshInstance3D = MeshInstance3D.new()
+	ice_plane.name = "IceSurfaceTexturePlane"
+	var plane: PlaneMesh = PlaneMesh.new()
+	plane.size = Vector2(RINK_LENGTH, RINK_WIDTH)
+	plane.subdivide_width = 1
+	plane.subdivide_depth = 1
+	ice_plane.mesh = plane
+	ice_plane.position = Vector3(0.0, LINE_HEIGHT - 0.075, 0.0)
+	ice_plane.material_override = _make_ice_texture_plane_material(texture)
+	world.add_child(ice_plane)
 
 func _create_ice_surface_details() -> void:
 	if _has_ice_texture():
@@ -34,20 +49,15 @@ func _create_faceoff_markings() -> void:
 		return
 	super._create_faceoff_markings()
 
-func _make_ice_surface_material() -> StandardMaterial3D:
+func _make_ice_texture_plane_material(texture: Texture2D) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_color = Color(0.88, 0.98, 1.0, 1.0)
+	material.albedo_texture = texture
+	material.albedo_color = Color(1.0, 1.0, 1.0, 1.0)
 	material.metallic = 0.0
-	material.roughness = 0.28
+	material.roughness = 0.38
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	material.uv1_scale = Vector3(1.0, 1.0, 1.0)
-
-	var texture: Texture2D = _load_ice_texture()
-	if texture != null:
-		material.albedo_texture = texture
-		material.albedo_color = Color(1.18, 1.18, 1.18, 1.0)
-		material.roughness = 0.34
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material
 
 func _has_ice_texture() -> bool:
