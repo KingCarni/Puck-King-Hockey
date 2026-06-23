@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/hockey/test_rink.gd" id="1_test_rink"]
 [ext_resource type="Script" path="res://scripts/hockey/player_controller.gd" id="2_player_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/puck_controller.gd" id="3_puck_controller"]
-[ext_resource type="Script" path="res://scripts/hockey/check_dummy.gd" id="4_check_dummy"]
+[ext_resource type="Script" path="res://scripts/hockey/ai_opponent_controller.gd" id="4_ai_opponent"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_player_body"]
 top_radius = 0.48
@@ -45,16 +45,16 @@ mesh = SubResource("CylinderMesh_player_body")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
 mesh = SubResource("BoxMesh_direction_marker")
 
-[node name="CheckDummy" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.72, 0)
-script = ExtResource("4_check_dummy")
+[node name="AwayAI" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.72, 0)
+script = ExtResource("4_ai_opponent")
 
-[node name="VisualRoot" type="Node3D" parent="CheckDummy"]
+[node name="VisualRoot" type="Node3D" parent="AwayAI"]
 
-[node name="BodyMesh" type="MeshInstance3D" parent="CheckDummy/VisualRoot"]
+[node name="BodyMesh" type="MeshInstance3D" parent="AwayAI/VisualRoot"]
 mesh = SubResource("CylinderMesh_player_body")
 
-[node name="DirectionMarker" type="MeshInstance3D" parent="CheckDummy/VisualRoot"]
+[node name="DirectionMarker" type="MeshInstance3D" parent="AwayAI/VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
 mesh = SubResource("BoxMesh_direction_marker")
 
