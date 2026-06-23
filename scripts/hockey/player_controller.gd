@@ -16,12 +16,24 @@ const RINK_HALF_WIDTH: float = 8.35
 @export var slap_shot_charge_seconds: float = 0.72
 @export var minimum_shot_power: float = 0.08
 @export var charge_meter_height: float = 0.10
+@export var check_cooldown_seconds: float = 0.62
+@export var check_active_seconds: float = 0.18
+@export var check_lunge_speed: float = 8.0
+@export var check_hit_radius: float = 1.35
+@export var check_forward_dot: float = 0.18
+@export var check_knockback_force: float = 12.0
+@export var check_puck_force: float = 12.0
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.FORWARD
 var _puck: Node = null
 var _is_charging_shot: bool = false
 var _shot_charge_time: float = 0.0
+var _check_cooldown_timer: float = 0.0
+var _check_active_timer: float = 0.0
+var _has_hit_during_check: bool = false
+var _body_material: StandardMaterial3D = null
+var _checking_material: StandardMaterial3D = null
 
 @onready var _visual_root: Node3D = $VisualRoot
 @onready var _body_mesh: MeshInstance3D = $VisualRoot/BodyMesh
@@ -36,6 +48,9 @@ func _ready() -> void:
 	_puck = get_node_or_null(puck_path)
 
 func _physics_process(delta: float) -> void:
+	_update_check_timers(delta)
+	_handle_check_input()
+
 	var input_direction: Vector3 = _get_input_direction()
 	var is_sprinting: bool = Input.is_action_pressed("skate_sprint")
 	var target_acceleration: float = sprint_acceleration if is_sprinting else acceleration
@@ -54,7 +69,9 @@ func _physics_process(delta: float) -> void:
 
 	_apply_rink_bounds()
 	_rotate_visuals(delta)
+	_update_check_collision()
 	_update_puck_interaction(delta)
+	_update_check_visuals()
 
 func _get_input_direction() -> Vector3:
 	var input_vector: Vector2 = Input.get_vector("skate_left", "skate_right", "skate_up", "skate_down")
@@ -86,6 +103,65 @@ func _rotate_visuals(delta: float) -> void:
 
 	var target_yaw: float = atan2(facing_direction.x, facing_direction.z)
 	_visual_root.rotation.y = lerp_angle(_visual_root.rotation.y, target_yaw, turn_speed * delta)
+
+func _update_check_timers(delta: float) -> void:
+	_check_cooldown_timer = max(_check_cooldown_timer - delta, 0.0)
+	_check_active_timer = max(_check_active_timer - delta, 0.0)
+
+func _handle_check_input() -> void:
+	if not Input.is_action_just_pressed("body_check"):
+		return
+
+	if _check_cooldown_timer > 0.0:
+		return
+
+	var facing_direction: Vector3 = _get_facing_direction()
+	_move_velocity += facing_direction * check_lunge_speed
+	_move_velocity = _move_velocity.limit_length(sprint_max_speed + check_lunge_speed * 0.55)
+	_check_active_timer = check_active_seconds
+	_check_cooldown_timer = check_cooldown_seconds
+	_has_hit_during_check = false
+
+func _update_check_collision() -> void:
+	if _check_active_timer <= 0.0 or _has_hit_during_check:
+		return
+
+	var facing_direction: Vector3 = _get_facing_direction()
+	var checkable_nodes: Array[Node] = get_tree().get_nodes_in_group("checkable")
+
+	for checkable_node: Node in checkable_nodes:
+		var target: Node3D = checkable_node as Node3D
+		if target == null or target == self:
+			continue
+
+		var flat_delta: Vector3 = Vector3(target.global_position.x - global_position.x, 0.0, target.global_position.z - global_position.z)
+		var distance: float = flat_delta.length()
+		if distance > check_hit_radius or distance <= 0.001:
+			continue
+
+		var target_direction: Vector3 = flat_delta.normalized()
+		var forward_dot: float = facing_direction.dot(target_direction)
+		if forward_dot < check_forward_dot:
+			continue
+
+		if target.has_method("receive_check"):
+			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity)
+
+		if _puck != null and _puck.has_method("poke_free"):
+			_puck.call("poke_free", facing_direction + target_direction * 0.35, check_puck_force)
+
+		_has_hit_during_check = true
+		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
+		return
+
+func _update_check_visuals() -> void:
+	if _body_material == null or _checking_material == null:
+		return
+
+	if _check_active_timer > 0.0:
+		_body_mesh.material_override = _checking_material
+	else:
+		_body_mesh.material_override = _body_material
 
 func _update_puck_interaction(delta: float) -> void:
 	if _puck == null:
@@ -150,10 +226,16 @@ func _get_facing_direction() -> Vector3:
 	return facing_direction.normalized()
 
 func _build_placeholder_visuals() -> void:
-	var body_material: StandardMaterial3D = StandardMaterial3D.new()
-	body_material.albedo_color = Color(0.08, 0.34, 1.0, 1.0)
-	body_material.roughness = 0.35
-	_body_mesh.material_override = body_material
+	_body_material = StandardMaterial3D.new()
+	_body_material.albedo_color = Color(0.08, 0.34, 1.0, 1.0)
+	_body_material.roughness = 0.35
+	_body_mesh.material_override = _body_material
+
+	_checking_material = StandardMaterial3D.new()
+	_checking_material.albedo_color = Color(0.25, 0.75, 1.0, 1.0)
+	_checking_material.emission_enabled = true
+	_checking_material.emission = Color(0.1, 0.45, 1.0, 1.0)
+	_checking_material.emission_energy_multiplier = 0.45
 
 	var direction_material: StandardMaterial3D = StandardMaterial3D.new()
 	direction_material.albedo_color = Color(0.02, 0.025, 0.03, 1.0)
