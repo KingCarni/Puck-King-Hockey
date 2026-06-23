@@ -34,7 +34,7 @@ func _build_ui() -> void:
 
 	_panel = PanelContainer.new()
 	_panel.name = "Panel"
-	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 

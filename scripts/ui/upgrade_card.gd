@@ -48,7 +48,7 @@ func configure(index: int, title: String, description: String, hotkey: String = 
 func _build_ui() -> void:
 	_panel = PanelContainer.new()
 	_panel.name = "Panel"
-	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 
@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	# Invisible full-card button for mouse + keyboard focus.
 	_button = Button.new()
 	_button.name = "ClickArea"
-	_button.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_button.flat = true
 	_button.focus_mode = Control.FOCUS_ALL
 	_button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())

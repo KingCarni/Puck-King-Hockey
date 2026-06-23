@@ -26,13 +26,13 @@ func _ready() -> void:
 func _build_ui() -> void:
 	_root = Control.new()
 	_root.name = "PauseRoot"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 
 	_shade = ColorRect.new()
 	_shade.name = "Shade"
-	_shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_shade.color = Color(0.0, 0.0, 0.0, 0.78)
 	_shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(_shade)

@@ -3,6 +3,9 @@ extends Node3D
 const MATCH_HUD_SCENE: PackedScene = preload("res://scenes/ui/MatchHUD.tscn")
 const REWARD_DRAFT_SCENE: PackedScene = preload("res://scenes/ui/RewardDraft.tscn")
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/ui/PauseMenu.tscn")
+const GAME_OVER_SCENE: PackedScene = preload("res://scenes/ui/GameOver.tscn")
+const MatchClockScript: GDScript = preload("res://scripts/match/match_clock.gd")
+const MAIN_MENU_PATH: String = "res://scenes/ui/MainMenu.tscn"
 
 const RINK_LENGTH: float = 34.0
 const RINK_WIDTH: float = 18.0
@@ -20,8 +23,6 @@ const AWAY_GOAL_X: float = -RINK_LENGTH * 0.5 + 1.05
 const POST_GOAL_RESET_DELAY: float = 3.0
 const REWARD_DRAFT_DELAY: float = 2.6
 
-var _home_score: int = 0
-var _away_score: int = 0
 var _reward_visible: bool = false
 var _goal_lockout: bool = false
 var _selected_upgrades: Array[Dictionary] = []
@@ -29,23 +30,28 @@ var _reward_options: Array[Dictionary] = [
 	{
 		"id": "rocket_skates",
 		"title": "Rocket Skates",
-		"description": "+Speed, +boost speed, +acceleration."
+		"description": "+Speed, +boost speed, +acceleration.",
+		"glyph": "\u26A1"
 	},
 	{
 		"id": "sticky_tape",
 		"title": "Sticky Tape",
-		"description": "+Puck pickup radius and smoother puck control."
+		"description": "+Puck pickup radius and smoother puck control.",
+		"glyph": "\u269B"
 	},
 	{
 		"id": "titanium_pads",
 		"title": "Titanium Pads",
-		"description": "+Checking power, +hit range, +puck pop force."
+		"description": "+Checking power, +hit range, +puck pop force.",
+		"glyph": "\u2694"
 	}
 ]
 
 var _hud: CanvasLayer = null
 var _reward_draft: CanvasLayer = null
 var _pause_menu: CanvasLayer = null
+var _game_over: CanvasLayer = null
+var _match_clock: Node = null
 
 @onready var world: Node3D = $World
 @onready var camera: Camera3D = $CameraRig/IsometricCamera
@@ -60,14 +66,16 @@ func _ready() -> void:
 	_configure_camera()
 	_build_test_rink()
 	_build_ui()
-	_update_scoreboard()
+	_build_match_clock()
 	_reset_faceoff(false)
-	_hud.show_notification("FIRST HOME GOAL TRIGGERS REWARD DRAFT", Color(1.0, 0.78, 0.10, 1.0), 2.4)
+	_start_match()
 
 func _process(_delta: float) -> void:
 	if _reward_visible:
 		return
 	if _pause_menu != null and _pause_menu.has_method("is_open") and _pause_menu.call("is_open"):
+		return
+	if _match_clock != null and _match_clock.match_over:
 		return
 	_check_goal_state()
 
@@ -91,29 +99,85 @@ func _build_ui() -> void:
 	_pause_menu.restart_requested.connect(_on_pause_restart)
 	_pause_menu.quit_requested.connect(_on_pause_quit)
 
+	_game_over = GAME_OVER_SCENE.instantiate()
+	add_child(_game_over)
+	_game_over.rematch_requested.connect(_on_rematch_requested)
+	_game_over.main_menu_requested.connect(_on_main_menu_requested)
+
+func _build_match_clock() -> void:
+	_match_clock = Node.new()
+	_match_clock.set_script(MatchClockScript)
+	_match_clock.name = "MatchClock"
+	add_child(_match_clock)
+	_match_clock.time_changed.connect(_on_clock_time_changed)
+	_match_clock.period_changed.connect(_on_clock_period_changed)
+	_match_clock.match_ended.connect(_on_match_ended)
+
+func _start_match() -> void:
+	var preset: Dictionary = MatchSession.get_preset()
+	_match_clock.start_match(preset)
+	_hud.set_score(0, 0)
+	_hud.set_upgrades([])
+	var preset_title: String = String(preset.get("title", "MATCH"))
+	_hud.show_notification("%s — FACEOFF!" % preset_title, Color(1.0, 0.78, 0.10, 1.0), 2.4)
+
 func _toggle_pause() -> void:
 	if _reward_visible:
 		return
 	if _pause_menu == null:
 		return
 	_pause_menu.toggle()
+	if _pause_menu.has_method("is_open") and _pause_menu.call("is_open"):
+		if _match_clock != null:
+			_match_clock.stop()
+		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
+	else:
+		if _match_clock != null:
+			_match_clock.resume()
 
 func _on_pause_resume() -> void:
+	if _match_clock != null:
+		_match_clock.resume()
 	_hud.show_notification("BACK IN PLAY", Color(0.18, 0.55, 1.0, 1.0), 1.0)
+	SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
 
 func _on_pause_restart() -> void:
+	SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
 func _on_pause_quit() -> void:
+	SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
 	get_tree().paused = false
-	get_tree().quit()
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
-func _configure_camera() -> void:
-	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 27.0
-	camera.global_position = Vector3(0.0, 26.0, 24.0)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
+func _on_rematch_requested() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+func _on_main_menu_requested() -> void:
+	get_tree().paused = false
+	# game_over already calls change_scene_to_file, but if it didn't we would here.
+
+func _on_clock_time_changed(seconds_left: float, _period_index: int, period_label: String) -> void:
+	if _hud != null:
+		_hud.set_clock(seconds_left, period_label)
+
+func _on_clock_period_changed(_period_index: int, period_label: String, is_overtime: bool) -> void:
+	if _hud == null:
+		return
+	if is_overtime:
+		_hud.show_notification("OVERTIME — NEXT GOAL WINS", Color(1.0, 0.20, 0.22, 1.0), 2.0)
+	else:
+		_hud.show_notification("%s — START!" % period_label, Color(1.0, 0.78, 0.10, 1.0), 1.6)
+	SfxPlayer.play(SfxPlayer.ID_PERIOD_END)
+
+func _on_match_ended(winner: String, home_score: int, away_score: int) -> void:
+	MatchSession.record_result(winner, home_score, away_score)
+	_set_match_enabled(false)
+	SfxPlayer.play(SfxPlayer.ID_MATCH_WIN)
+	if _game_over != null:
+		_game_over.open(winner, home_score, away_score)
 
 func _check_goal_state() -> void:
 	if _puck == null:
@@ -127,20 +191,28 @@ func _check_goal_state() -> void:
 		return
 
 	if puck_position.x >= HOME_GOAL_X:
-		_home_score += 1
-		_update_scoreboard()
-		_hud.celebrate_goal("HOME")
-		_goal_lockout = true
-		_set_match_enabled(false)
-		_reset_faceoff(false)
-		_schedule_home_goal_draft()
+		_register_goal("HOME")
 	elif puck_position.x <= AWAY_GOAL_X:
-		_away_score += 1
-		_update_scoreboard()
-		_hud.celebrate_goal("AWAY")
-		_goal_lockout = true
-		_set_match_enabled(false)
-		_reset_faceoff(false)
+		_register_goal("AWAY")
+
+func _register_goal(team: String) -> void:
+	var ends_match: bool = false
+	if _match_clock != null:
+		ends_match = _match_clock.register_goal(team)
+		_match_clock.stop()
+	_hud.set_score(_match_clock.get_home_score(), _match_clock.get_away_score())
+	_hud.celebrate_goal(team)
+	SfxPlayer.play(SfxPlayer.ID_GOAL_HORN)
+	_goal_lockout = true
+	_set_match_enabled(false)
+	_reset_faceoff(false)
+
+	if ends_match:
+		return  # match_ended signal will handle the rest.
+
+	if team == "HOME":
+		_schedule_home_goal_draft()
+	else:
 		_schedule_post_goal_reset()
 
 func _schedule_home_goal_draft() -> void:
@@ -157,10 +229,14 @@ func _schedule_post_goal_reset() -> void:
 func _on_post_goal_reset_timeout() -> void:
 	if _reward_visible:
 		return
+	if _match_clock != null and _match_clock.match_over:
+		return
 	_goal_lockout = false
 	_hud.show_notification("FACEOFF AT CENTER", Color(1.0, 0.78, 0.10, 1.0), 1.2)
 	_set_match_enabled(true)
 	_reset_faceoff(true)
+	if _match_clock != null:
+		_match_clock.resume()
 
 func _show_reward_draft() -> void:
 	_reward_visible = true
@@ -184,9 +260,18 @@ func _on_reward_selected(index: int, upgrade_id: String) -> void:
 	if _reward_draft != null:
 		_reward_draft.hide_draft()
 
+	SfxPlayer.play(SfxPlayer.ID_REWARD_PICK)
 	_hud.show_notification("PICKED UP: %s" % String(option["title"]), Color(1.0, 0.78, 0.10, 1.0), 1.8)
 	_set_match_enabled(true)
 	_reset_faceoff(true)
+	if _match_clock != null:
+		_match_clock.resume()
+
+func _configure_camera() -> void:
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 27.0
+	camera.global_position = Vector3(0.0, 26.0, 24.0)
+	camera.look_at(Vector3.ZERO, Vector3.UP)
 
 func _apply_upgrade(upgrade_id: String) -> void:
 	match upgrade_id:
@@ -236,10 +321,6 @@ func _set_match_enabled(is_enabled: bool) -> void:
 	_player.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
 	_away_ai.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
 	_puck.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
-
-func _update_scoreboard() -> void:
-	if _hud != null:
-		_hud.set_score(_home_score, _away_score)
 
 func _update_upgrade_display() -> void:
 	if _hud != null:

@@ -1,91 +1,105 @@
 # Puck King Hell — PRD
 
 ## Original Problem Statement
-Implement the first production-quality UI pass for **Puck King Hell**, a Godot 4.6
-arcade hockey roguelite. The gameplay (movement, sprint, possession, shooting,
-checking, AI, scoring, post-match reward draft, upgrades) is already in place but
-the UI is debug/prototype quality. Replace it with proper UI scenes for:
-scoreboard, upgrade display, reward draft, goal celebration banner, reusable
-notification system, and pause menu — all controller/TV friendly, bold, arcade
-in style (Mutant League Hockey / NHL Hitz / pro wrestling vibe).
+Implement the next UI milestones for **Puck King Hell**, a Godot 4.6 arcade
+hockey roguelite. Iteration 1 delivered the first production UI pass; this
+iteration extends it with a match clock, win conditions, main menu, settings
+stub, game-over screen, and procedural audio pipeline — and fixes the
+goal-banner positioning bug.
 
 ## Game Vision
-- Arcade hockey, not a simulation.
-- Fun > realism. Spectacle, personality, readability.
-- Bold, large, controller-friendly UI. Big scoreboards, animated banners, goal
-  celebrations, wrestling-style presentation.
+Arcade hockey, not simulation. Fun > realism. Bold, large, controller-friendly
+UI. Big banners, wrestling-style spectacle. Couch + TV first.
 
 ## User Persona
-- Couch player on a TV with an Xbox-style controller.
-- Also playable at desk with mouse + keyboard.
+Couch player on a TV with an Xbox-style controller (with mouse + keyboard as a
+secondary).
 
-## Core Requirements (static)
+## Static Core Requirements
 - React fast and arcade-loud at all viewport sizes.
 - Controller-first: focus-based navigation, big buttons.
-- Reusable UI components for future features (e.g. minimap, power meters).
+- Reusable UI components for future features (overlays, banners, panels).
 
-## What's been implemented — 2026-01
+## What's been implemented
 
-### UI Milestone 1 (this iteration)
-- **Theme palette autoload** (`scripts/ui/ui_palette.gd`) — fonts (Bungee +
-  Bungee Inline), colour constants, label/button/panel style helpers.
-- **MatchHUD** scene + script — top-center scoreboard with team pills, big gold
-  scores, VS plate, "PUCK KING HELL" identity; top-left "PERKS" panel that
-  pops new perks in; top-right pause hint; hosts notification banner + goal
-  banner.
-- **Notification banner** — reusable slide-down/hold/slide-up banner.
-- **Goal banner** — full-width punch-in/hold/punch-out celebration; tints
-  home/away appropriately; pulses the relevant score number.
-- **Reward draft** modal — three big arcade cards with ribbon, icon, title,
-  description and hotkey pill. Mouse click, focus-driven keyboard navigation,
-  hotkeys 1/2/3 and pad A/X/Y all wired up.
-- **Pause menu** — Resume / Restart Match / Quit To Menu, opened via ESC or
-  controller Start. Resume button auto-focused. Always processes during pause.
-- **Project config** — added `pause_menu` input action (ESC + JOY_BUTTON_START)
-  and `UiPalette` autoload.
-- **Refactor**: removed all UI building code from `scripts/hockey/test_rink.gd`.
-  It now instantiates the three new UI scenes and coordinates goal celebration
-  timing with the reward draft (banner plays first, then cards appear).
+### UI Milestone 1 (previous)
+- Heavy-metal HUD: scoreboard, upgrade panel, notifications, goal banner.
+- Reward Draft modal with three cards (mouse / 1-2-3 / A-X-Y).
+- Pause Menu (ESC / Start).
 
-## Files Changed
-- `project.godot`
+### UI Milestone 2 (this iteration — 2026-01)
+- **Main Menu** scene with preset picker, settings stub, quit.
+- **Match presets**: Quick Hit / Standard / Marathon / Sudden Death /
+  Adventure (randomised, equatable). Player-selectable from main menu.
+- **Match clock + period system** with overtime, sudden-death, mercy rule,
+  and draw handling.
+- **Scoreboard rebuild**: HOME tile / center timer-and-period tile / AWAY
+  tile with team logo glyphs.
+- **Game Over modal** with rematch and return-to-menu options.
+- **Goal banner centering bug** fixed (`set_anchors_and_offsets_preset`).
+- **Procedural audio pipeline**: `SfxPlayer` autoload generates 16-bit PCM
+  samples in-code for goal horn, hits, UI clicks, chimes, whistles, match
+  win — routed through a 6-player pool. Drop real .wav files in
+  `_build_samples()` later.
+- **Quit-to-menu** now actually goes to the Main Menu (was quitting the app).
+- **Match session** autoload carries preset + last-match result between
+  scenes.
+
+## Files Modified
+- `project.godot` (main scene → MainMenu, new autoloads)
 - `scripts/hockey/test_rink.gd`
+- `scripts/ui/match_hud.gd`
+- `scripts/ui/goal_banner.gd`
+- `scripts/ui/notification_banner.gd`, `pause_menu.gd`, `reward_draft.gd`,
+  `upgrade_card.gd` (anchors-preset bug fix)
 
 ## Files Created
-- `assets/fonts/Bungee-Regular.ttf` (+ `.import`)
-- `assets/fonts/BungeeInline-Regular.ttf` (+ `.import`)
-- `scenes/ui/MatchHUD.tscn`
-- `scenes/ui/RewardDraft.tscn`
-- `scenes/ui/PauseMenu.tscn`
-- `scripts/ui/ui_palette.gd`
-- `scripts/ui/match_hud.gd`
-- `scripts/ui/notification_banner.gd`
-- `scripts/ui/goal_banner.gd`
-- `scripts/ui/upgrade_card.gd`
-- `scripts/ui/reward_draft.gd`
-- `scripts/ui/pause_menu.gd`
-- `docs/UI.md`
-- `docs/01_initial.png` … `docs/05_pause_menu.png`
+- `scenes/ui/MainMenu.tscn`, `scenes/ui/GameOver.tscn`
+- `scripts/ui/main_menu.gd`, `game_over.gd`
+- `scripts/data/match_preset.gd`
+- `scripts/match/match_clock.gd`
+- `scripts/core/match_session.gd`
+- `scripts/audio/sfx_player.gd`
+- `docs/UI.md` (updated)
+- `docs/main_menu.png`, `hud_initial.png`, `goal_banner.png`,
+  `reward_draft.png`, `after_reward.png`, `pause_menu.png`, `game_over.png`
 
-## Validation Done
-Project was scanned and run headlessly with Godot 4.3 (arm64) on the build
-environment. Five state screenshots were captured under Xvfb at 2560×1440 and
-pixel-sampled for expected gold/red/white regions in each UI state (initial,
-goal banner, reward draft, post-reward, pause menu). No runtime errors.
+## Validation
+Project scanned + run headlessly with Godot 4.3 (arm64) on the build
+environment. Screenshots of all 7 key states (main menu → match → goal
+banner → reward draft → after reward → pause → game over) captured under
+Xvfb at 2560×1440 and pixel-sampled to verify centering and colour
+correctness.
+
+Specifically for the goal banner:
+- Pre-fix: hot-gold "GOAL!" pixel centroid at `(782, 76)` (top-left).
+- Post-fix: hot-gold "GOAL!" pixel centroid at `(1265, 691)` versus viewport
+  centre `(1280, 720)`.
 
 ## Prioritized Backlog
-- **P1**: Main menu scene so "Quit To Menu" can land somewhere instead of
-  exiting the application.
-- **P1**: Period timer + match length + win condition UI.
-- **P2**: Sound effects (puck hit, goal horn, banner whoosh) — currently silent.
-- **P2**: Localized strings (currently inline English in scripts).
-- **P2**: Settings menu (sensitivity, volume, key/pad rebinding).
-- **P3**: Icon art for upgrade cards (currently placeholder star glyph).
-- **P3**: Per-upgrade colour theme on the card ribbon.
-- **P3**: HUD shake on big hits / goals.
+
+### P1
+- Real SFX files (drop .wav into `assets/audio/` and rewire `_build_samples`).
+- Real upgrade card icons (replace the placeholder glyph in `upgrade_card.gd`).
+- Apply Adventure-mode label to the scoreboard subtitle when picked
+  (currently shows the rolled variant title via notification only).
+- Proper rebinding screen (currently a "coming soon" line).
+
+### P2
+- Goalies + 5-on-5 skaters (UI scaffolding only — non-UI work).
+- Music bus + procedural soundtrack stinger.
+- Crowd ambience track.
+- Per-upgrade ribbon tinting on draft cards.
+
+### P3
+- Localized strings (everything currently inline English).
+- Replays / camera flourishes during the goal celebration.
+- Achievement / unlock toasts using the existing notification banner.
 
 ## Next Action Items
-1. Add a main menu scene (`scenes/menus/MainMenu.tscn`) and route
-   "Quit To Menu" to it.
-2. Add a period timer + first-to-N or timed win condition to the scoreboard.
-3. Hook up goal horn / SFX once an audio pipeline exists.
+1. Drop real SFX files in `assets/audio/` and wire them into
+   `scripts/audio/sfx_player.gd`.
+2. Author icon sprites for the three current upgrades; swap the glyph in the
+   reward-card icon area.
+3. Build a "ROUND CLEARED" celebration screen when Adventure runs gain a
+   `runs` concept (separate from a single match).
