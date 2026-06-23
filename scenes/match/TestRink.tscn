@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://puckkingtestrink"]
 
-[ext_resource type="Script" path="res://scripts/hockey/test_rink.gd" id="1_test_rink"]
+[ext_resource type="Script" path="res://scripts/hockey/test_rink_art_pass.gd" id="1_test_rink"]
 [ext_resource type="Script" path="res://scripts/hockey/player_controller.gd" id="2_player_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/puck_controller.gd" id="3_puck_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/ai_opponent_controller.gd" id="4_ai_opponent"]
@@ -80,14 +80,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 
 [node name="IsometricCamera" type="Camera3D" parent="CameraRig"]
 current = true
-projection = 1
-size = 31.0
-near = 0.05
-far = 200.0
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.707107, -0.353553, 0.612372, 0, 0.866025, 0.5, -0.707107, -0.353553, 0.612372, 0, 16, 8)
-light_energy = 2.4
-shadow_enabled = true
-
-[node name="Environment" type="WorldEnvironment" parent="."]
