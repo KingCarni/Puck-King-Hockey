@@ -4,9 +4,9 @@ const RINK_HALF_LENGTH: float = 16.35
 const RINK_HALF_WIDTH: float = 8.35
 
 @export var acceleration: float = 22.0
-@export var sprint_acceleration: float = 31.0
+@export var sprint_acceleration: float = 36.0
 @export var max_speed: float = 8.0
-@export var sprint_max_speed: float = 11.0
+@export var sprint_max_speed: float = 13.5
 @export var ice_friction: float = 4.5
 @export var turn_speed: float = 12.0
 @export var board_bounce: float = 0.28
