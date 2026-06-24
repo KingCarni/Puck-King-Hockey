@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
-const RINK_HALF_LENGTH: float = 16.35
-const RINK_HALF_WIDTH: float = 8.35
+const RINK_HALF_LENGTH: float = 19.25
+const RINK_HALF_WIDTH: float = 9.25
 
 @export var acceleration: float = 22.0
 @export var sprint_acceleration: float = 36.0
@@ -285,9 +285,9 @@ func _update_charge_meter(power: float, is_visible: bool) -> void:
 	_charge_meter_fill.scale.x = max(clamped_power, 0.04)
 	_charge_meter_fill.position.x = -0.5 + clamped_power * 0.5
 
-	if _charge_fill_material != null:
-		var red_value: float = lerp(1.0, 1.0, clamped_power)
-		var green_value: float = lerp(0.85, 0.18, clamped_power)
-		var blue_value: float = lerp(0.15, 0.05, clamped_power)
-		_charge_fill_material.albedo_color = Color(red_value, green_value, blue_value, 0.95)
-		_charge_fill_material.emission = Color(red_value, green_value * 0.75, blue_value, 1.0)
+	if clamped_power > 0.92:
+		_charge_fill_material.albedo_color = Color(1.0, 0.22, 0.12, 1.0)
+		_charge_fill_material.emission = Color(1.0, 0.05, 0.02, 1.0)
+	else:
+		_charge_fill_material.albedo_color = Color(1.0, 0.85, 0.15, 0.95)
+		_charge_fill_material.emission = Color(1.0, 0.55, 0.05, 1.0)
