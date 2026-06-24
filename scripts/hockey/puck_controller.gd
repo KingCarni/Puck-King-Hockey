@@ -1,7 +1,7 @@
 extends Node3D
 
-const RINK_HALF_LENGTH: float = 16.25
-const RINK_HALF_WIDTH: float = 8.25
+const RINK_HALF_LENGTH: float = 19.25
+const RINK_HALF_WIDTH: float = 9.25
 const PUCK_Y: float = 0.18
 
 @export var pickup_radius: float = 1.05
