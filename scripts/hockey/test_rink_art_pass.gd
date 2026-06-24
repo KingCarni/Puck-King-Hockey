@@ -4,12 +4,79 @@ const ICE_TEXTURE_WEBP_PATH: String = "res://assets/art/rink/pkh_ice_surface.web
 const ICE_TEXTURE_PNG_PATH: String = "res://assets/art/rink/pkh_ice_surface.png"
 const ICE_TEXTURE_Y: float = 0.082
 
+const ART_RINK_LENGTH: float = 38.5
+const ART_RINK_WIDTH: float = 20.5
+const ART_HOME_GOAL_X: float = ART_RINK_LENGTH * 0.5 - 1.05
+const ART_AWAY_GOAL_X: float = -ART_RINK_LENGTH * 0.5 + 1.05
+const HOME_TEAMMATE_START: Vector3 = Vector3(-8.2, PLAYER_Y, 3.7)
+const AWAY_TEAMMATE_START: Vector3 = Vector3(8.2, PLAYER_Y, -3.7)
+
 const VISUAL_BOARD_Y: float = 0.42
 const VISUAL_GLASS_Y: float = 1.18
 const VISUAL_POST_Y: float = 1.08
 
+@onready var _home_teammate: Node3D = get_node_or_null("HomeTeammate") as Node3D
+@onready var _away_teammate: Node3D = get_node_or_null("AwayTeammate") as Node3D
+
+func _configure_camera() -> void:
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 30.0
+	camera.global_position = Vector3(0.0, 28.0, 25.5)
+	camera.look_at(Vector3.ZERO, Vector3.UP)
+
+func _check_goal_state() -> void:
+	if _puck == null:
+		return
+	if _goal_lockout:
+		return
+
+	var puck_position: Vector3 = _puck.global_position
+	var is_inside_goal_width: bool = abs(puck_position.z) <= GOAL_WIDTH * 0.5 + 0.35
+	if not is_inside_goal_width:
+		return
+
+	if puck_position.x >= ART_HOME_GOAL_X:
+		_register_goal("HOME")
+	elif puck_position.x <= ART_AWAY_GOAL_X:
+		_register_goal("AWAY")
+
+func _reset_faceoff(clear_puck: bool) -> void:
+	super._reset_faceoff(clear_puck)
+	_reset_home_teammate()
+	_reset_away_teammate()
+
+func _set_match_enabled(is_enabled: bool) -> void:
+	super._set_match_enabled(is_enabled)
+	if _home_teammate != null:
+		_home_teammate.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
+	if _away_teammate != null:
+		_away_teammate.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
+
+func _reset_home_teammate() -> void:
+	if _home_teammate == null:
+		return
+	_home_teammate.global_position = HOME_TEAMMATE_START
+	_home_teammate.set("_move_velocity", Vector3.ZERO)
+	_home_teammate.set("_last_facing_direction", Vector3.RIGHT)
+	_home_teammate.set("_shoot_cooldown_timer", 0.0)
+
+func _reset_away_teammate() -> void:
+	if _away_teammate == null:
+		return
+	_away_teammate.global_position = AWAY_TEAMMATE_START
+	_away_teammate.set("_move_velocity", Vector3.ZERO)
+	_away_teammate.set("_last_facing_direction", Vector3.LEFT)
+	_away_teammate.set("_stun_timer", 0.0)
+	_away_teammate.set("_shoot_cooldown_timer", 0.0)
+
+func _create_floor_backdrop() -> void:
+	var floor: MeshInstance3D = _create_box("DarkArenaFloor", Vector3(ART_RINK_LENGTH + 8.0, 0.08, ART_RINK_WIDTH + 8.0), Vector3.ZERO)
+	floor.position.y = -0.08
+	floor.material_override = _make_material(Color(0.035, 0.038, 0.042, 1.0), 0.0, 0.78)
+	world.add_child(floor)
+
 func _create_ice_surface() -> void:
-	var base_ice: MeshInstance3D = _create_box("IceSurfaceBase", Vector3(RINK_LENGTH, ICE_THICKNESS, RINK_WIDTH), Vector3.ZERO)
+	var base_ice: MeshInstance3D = _create_box("IceSurfaceBase", Vector3(ART_RINK_LENGTH, ICE_THICKNESS, ART_RINK_WIDTH), Vector3.ZERO)
 	base_ice.material_override = _make_material(Color(0.86, 0.97, 1.0, 1.0), 0.0, 0.24)
 	world.add_child(base_ice)
 
@@ -20,10 +87,8 @@ func _create_ice_surface() -> void:
 	var ice_quad: MeshInstance3D = MeshInstance3D.new()
 	ice_quad.name = "IceSurfaceTextureQuad"
 
-	# QuadMesh gives us predictable UVs. Rotate it flat onto the rink so the full image
-	# maps once across the ice instead of relying on BoxMesh face UVs.
 	var quad: QuadMesh = QuadMesh.new()
-	quad.size = Vector2(RINK_LENGTH, RINK_WIDTH)
+	quad.size = Vector2(ART_RINK_LENGTH, ART_RINK_WIDTH)
 	ice_quad.mesh = quad
 	ice_quad.position = Vector3(0.0, ICE_TEXTURE_Y, 0.0)
 	ice_quad.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
@@ -35,7 +100,6 @@ func _create_ice_surface_details() -> void:
 		_create_subtle_ice_edge_glow()
 		return
 
-	# Keep the procedural detail pass as a fallback when no external asset exists.
 	_create_ice_under_panels()
 	_create_center_ice_badge()
 	_create_ice_scratch_marks()
@@ -57,28 +121,53 @@ func _create_faceoff_markings() -> void:
 	super._create_faceoff_markings()
 
 func _create_boards() -> void:
-	# Keep invisible-ish physical board blocks in the same position as the base rink so puck collisions remain unchanged.
 	var collision_board_material: StandardMaterial3D = _make_material(Color(0.18, 0.20, 0.20, 0.18), 0.0, 0.80)
-	var top_collision: MeshInstance3D = _create_box("TopBoardsCollisionVisual", Vector3(RINK_LENGTH + BOARD_THICKNESS, BOARD_HEIGHT, BOARD_THICKNESS), Vector3(0.0, BOARD_HEIGHT * 0.5, -RINK_WIDTH * 0.5))
-	var bottom_collision: MeshInstance3D = _create_box("BottomBoardsCollisionVisual", Vector3(RINK_LENGTH + BOARD_THICKNESS, BOARD_HEIGHT, BOARD_THICKNESS), Vector3(0.0, BOARD_HEIGHT * 0.5, RINK_WIDTH * 0.5))
-	var left_collision: MeshInstance3D = _create_box("LeftBoardsCollisionVisual", Vector3(BOARD_THICKNESS, BOARD_HEIGHT, RINK_WIDTH + BOARD_THICKNESS), Vector3(-RINK_LENGTH * 0.5, BOARD_HEIGHT * 0.5, 0.0))
-	var right_collision: MeshInstance3D = _create_box("RightBoardsCollisionVisual", Vector3(BOARD_THICKNESS, BOARD_HEIGHT, RINK_WIDTH + BOARD_THICKNESS), Vector3(RINK_LENGTH * 0.5, BOARD_HEIGHT * 0.5, 0.0))
+	var top_collision: MeshInstance3D = _create_box("TopBoardsCollisionVisual", Vector3(ART_RINK_LENGTH + BOARD_THICKNESS, BOARD_HEIGHT, BOARD_THICKNESS), Vector3(0.0, BOARD_HEIGHT * 0.5, -ART_RINK_WIDTH * 0.5))
+	var bottom_collision: MeshInstance3D = _create_box("BottomBoardsCollisionVisual", Vector3(ART_RINK_LENGTH + BOARD_THICKNESS, BOARD_HEIGHT, BOARD_THICKNESS), Vector3(0.0, BOARD_HEIGHT * 0.5, ART_RINK_WIDTH * 0.5))
+	var left_collision: MeshInstance3D = _create_box("LeftBoardsCollisionVisual", Vector3(BOARD_THICKNESS, BOARD_HEIGHT, ART_RINK_WIDTH + BOARD_THICKNESS), Vector3(-ART_RINK_LENGTH * 0.5, BOARD_HEIGHT * 0.5, 0.0))
+	var right_collision: MeshInstance3D = _create_box("RightBoardsCollisionVisual", Vector3(BOARD_THICKNESS, BOARD_HEIGHT, ART_RINK_WIDTH + BOARD_THICKNESS), Vector3(ART_RINK_LENGTH * 0.5, BOARD_HEIGHT * 0.5, 0.0))
 	var collision_boards: Array[MeshInstance3D] = [top_collision, bottom_collision, left_collision, right_collision]
 	for board: MeshInstance3D in collision_boards:
 		board.material_override = collision_board_material
 		world.add_child(board)
 
-	_create_arcade_board_run("TopVisualBoards", true, -RINK_WIDTH * 0.5 - 0.30, false)
-	_create_arcade_board_run("BottomVisualBoards", true, RINK_WIDTH * 0.5 + 0.30, true)
-	_create_arcade_board_run("LeftVisualBoards", false, -RINK_LENGTH * 0.5 - 0.30, false)
-	_create_arcade_board_run("RightVisualBoards", false, RINK_LENGTH * 0.5 + 0.30, true)
+	_create_arcade_board_run("TopVisualBoards", true, -ART_RINK_WIDTH * 0.5 - 0.30, false)
+	_create_arcade_board_run("BottomVisualBoards", true, ART_RINK_WIDTH * 0.5 + 0.30, true)
+	_create_arcade_board_run("LeftVisualBoards", false, -ART_RINK_LENGTH * 0.5 - 0.30, false)
+	_create_arcade_board_run("RightVisualBoards", false, ART_RINK_LENGTH * 0.5 + 0.30, true)
 	_create_board_corner_caps()
 
 func _create_glass_posts() -> void:
-	_create_arcade_glass_run("TopGlass", true, -RINK_WIDTH * 0.5 - 0.42, false)
-	_create_arcade_glass_run("BottomGlass", true, RINK_WIDTH * 0.5 + 0.42, true)
-	_create_arcade_glass_run("LeftGlass", false, -RINK_LENGTH * 0.5 - 0.42, false)
-	_create_arcade_glass_run("RightGlass", false, RINK_LENGTH * 0.5 + 0.42, true)
+	_create_arcade_glass_run("TopGlass", true, -ART_RINK_WIDTH * 0.5 - 0.42, false)
+	_create_arcade_glass_run("BottomGlass", true, ART_RINK_WIDTH * 0.5 + 0.42, true)
+	_create_arcade_glass_run("LeftGlass", false, -ART_RINK_LENGTH * 0.5 - 0.42, false)
+	_create_arcade_glass_run("RightGlass", false, ART_RINK_LENGTH * 0.5 + 0.42, true)
+
+func _create_goals() -> void:
+	var goal_material: StandardMaterial3D = _make_material(Color(0.85, 0.05, 0.05, 1.0), 0.0, 0.3)
+	var net_material: StandardMaterial3D = _make_material(Color(0.86, 0.88, 0.88, 0.65), 0.0, 0.6)
+	var goal_positions: Array[float] = [-ART_RINK_LENGTH * 0.5 + 0.55, ART_RINK_LENGTH * 0.5 - 0.55]
+
+	for x_position: float in goal_positions:
+		var goal_name: String = "LeftGoal" if x_position < 0.0 else "RightGoal"
+		var goal_direction: float = 1.0 if x_position < 0.0 else -1.0
+		var goal: Node3D = Node3D.new()
+		goal.name = goal_name
+		world.add_child(goal)
+
+		var back_bar: MeshInstance3D = _create_box("BackBar", Vector3(0.12, 1.0, GOAL_WIDTH), Vector3(x_position, 0.55, 0.0))
+		var top_post: MeshInstance3D = _create_box("TopPost", Vector3(GOAL_DEPTH, 0.12, 0.12), Vector3(x_position + goal_direction * GOAL_DEPTH * 0.5, 0.55, -GOAL_WIDTH * 0.5))
+		var bottom_post: MeshInstance3D = _create_box("BottomPost", Vector3(GOAL_DEPTH, 0.12, 0.12), Vector3(x_position + goal_direction * GOAL_DEPTH * 0.5, 0.55, GOAL_WIDTH * 0.5))
+		var cross_bar: MeshInstance3D = _create_box("CrossBar", Vector3(0.12, 0.12, GOAL_WIDTH), Vector3(x_position + goal_direction * GOAL_DEPTH, 1.05, 0.0))
+		var net: MeshInstance3D = _create_box("NetPlaceholder", Vector3(GOAL_DEPTH, 0.75, GOAL_WIDTH), Vector3(x_position + goal_direction * GOAL_DEPTH * 0.5, 0.48, 0.0))
+		var bars: Array[MeshInstance3D] = [back_bar, top_post, bottom_post, cross_bar]
+
+		for bar: MeshInstance3D in bars:
+			bar.material_override = goal_material
+			goal.add_child(bar)
+
+		net.material_override = net_material
+		goal.add_child(net)
 
 func _create_arcade_board_run(node_prefix: String, is_horizontal: bool, fixed_position: float, flip_trim: bool) -> void:
 	var white_material: StandardMaterial3D = _make_material(Color(0.94, 0.96, 0.96, 1.0), 0.0, 0.28)
@@ -87,8 +176,8 @@ func _create_arcade_board_run(node_prefix: String, is_horizontal: bool, fixed_po
 	var blue_material: StandardMaterial3D = _make_material(Color(0.08, 0.28, 0.95, 1.0), 0.0, 0.34)
 	var shadow_material: StandardMaterial3D = _make_material(Color(0.0, 0.0, 0.0, 0.36), 0.0, 0.70)
 
-	var length: float = RINK_LENGTH + 0.80 if is_horizontal else RINK_WIDTH + 0.80
-	var panel_count: int = 8 if is_horizontal else 4
+	var length: float = ART_RINK_LENGTH + 0.80 if is_horizontal else ART_RINK_WIDTH + 0.80
+	var panel_count: int = 9 if is_horizontal else 5
 	var panel_length: float = length / float(panel_count)
 	var start: float = -length * 0.5 + panel_length * 0.5
 
@@ -129,8 +218,8 @@ func _create_arcade_board_run(node_prefix: String, is_horizontal: bool, fixed_po
 func _create_arcade_glass_run(node_prefix: String, is_horizontal: bool, fixed_position: float, _flip_side: bool) -> void:
 	var glass_material: StandardMaterial3D = _make_glass_material()
 	var shine_material: StandardMaterial3D = _make_material(Color(0.85, 0.96, 1.0, 0.22), 0.0, 0.16)
-	var length: float = RINK_LENGTH + 0.45 if is_horizontal else RINK_WIDTH + 0.45
-	var panel_count: int = 8 if is_horizontal else 4
+	var length: float = ART_RINK_LENGTH + 0.45 if is_horizontal else ART_RINK_WIDTH + 0.45
+	var panel_count: int = 9 if is_horizontal else 5
 	var panel_length: float = length / float(panel_count)
 	var start: float = -length * 0.5 + panel_length * 0.5
 
@@ -155,7 +244,7 @@ func _create_arcade_glass_run(node_prefix: String, is_horizontal: bool, fixed_po
 func _create_major_stanchions(node_prefix: String, is_horizontal: bool, fixed_position: float, length: float) -> void:
 	var post_material: StandardMaterial3D = _make_material(Color(0.08, 0.10, 0.13, 1.0), 0.0, 0.32)
 	var cap_material: StandardMaterial3D = _make_material(Color(0.38, 0.44, 0.52, 1.0), 0.0, 0.22)
-	var count: int = 9 if is_horizontal else 5
+	var count: int = 10 if is_horizontal else 6
 	for index: int in range(count):
 		var t: float = float(index) / float(count - 1)
 		var along: float = lerp(-length * 0.5, length * 0.5, t)
@@ -174,10 +263,10 @@ func _create_major_stanchions(node_prefix: String, is_horizontal: bool, fixed_po
 func _create_board_corner_caps() -> void:
 	var post_material: StandardMaterial3D = _make_material(Color(0.04, 0.05, 0.065, 1.0), 0.0, 0.30)
 	var corner_positions: Array[Vector3] = [
-		Vector3(-RINK_LENGTH * 0.5 - 0.30, VISUAL_POST_Y, -RINK_WIDTH * 0.5 - 0.30),
-		Vector3(RINK_LENGTH * 0.5 + 0.30, VISUAL_POST_Y, -RINK_WIDTH * 0.5 - 0.30),
-		Vector3(-RINK_LENGTH * 0.5 - 0.30, VISUAL_POST_Y, RINK_WIDTH * 0.5 + 0.30),
-		Vector3(RINK_LENGTH * 0.5 + 0.30, VISUAL_POST_Y, RINK_WIDTH * 0.5 + 0.30)
+		Vector3(-ART_RINK_LENGTH * 0.5 - 0.30, VISUAL_POST_Y, -ART_RINK_WIDTH * 0.5 - 0.30),
+		Vector3(ART_RINK_LENGTH * 0.5 + 0.30, VISUAL_POST_Y, -ART_RINK_WIDTH * 0.5 - 0.30),
+		Vector3(-ART_RINK_LENGTH * 0.5 - 0.30, VISUAL_POST_Y, ART_RINK_WIDTH * 0.5 + 0.30),
+		Vector3(ART_RINK_LENGTH * 0.5 + 0.30, VISUAL_POST_Y, ART_RINK_WIDTH * 0.5 + 0.30)
 	]
 	for index: int in range(corner_positions.size()):
 		var corner: MeshInstance3D = _create_box("BoardCornerPost%02d" % index, Vector3(0.34, 1.30, 0.34), corner_positions[index])
@@ -216,7 +305,7 @@ func _load_ice_texture() -> Texture2D:
 
 func _create_subtle_ice_edge_glow() -> void:
 	var edge_material: StandardMaterial3D = _make_material(Color(0.55, 0.90, 1.0, 0.08), 0.0, 0.36)
-	_create_flat_line("TopIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, -RINK_WIDTH * 0.5 + 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("BottomIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, RINK_WIDTH * 0.5 - 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("LeftIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(-RINK_LENGTH * 0.5 + 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("RightIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(RINK_LENGTH * 0.5 - 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("TopIceTextureGlow", Vector3(ART_RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, -ART_RINK_WIDTH * 0.5 + 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("BottomIceTextureGlow", Vector3(ART_RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, ART_RINK_WIDTH * 0.5 - 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("LeftIceTextureGlow", Vector3(0.16, 0.012, ART_RINK_WIDTH - 1.0), Vector3(-ART_RINK_LENGTH * 0.5 + 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("RightIceTextureGlow", Vector3(0.16, 0.012, ART_RINK_WIDTH - 1.0), Vector3(ART_RINK_LENGTH * 0.5 - 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
