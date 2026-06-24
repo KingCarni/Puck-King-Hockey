@@ -1,7 +1,7 @@
 extends Node3D
 
-const RINK_HALF_LENGTH: float = 16.25
-const RINK_HALF_WIDTH: float = 8.25
+const RINK_HALF_LENGTH: float = 19.25
+const RINK_HALF_WIDTH: float = 9.25
 const PLAYER_Y: float = 0.72
 const PUCK_Y: float = 0.18
 
@@ -15,7 +15,7 @@ const PUCK_Y: float = 0.18
 @export var puck_pickup_radius: float = 1.05
 @export var puck_carry_distance: float = 1.0
 @export var puck_carry_side_offset: float = -0.18
-@export var shooting_x_threshold: float = -9.5
+@export var shooting_x_threshold: float = -10.2
 @export var shoot_cooldown_seconds: float = 1.15
 @export var shot_power: float = 0.72
 @export var pressure_distance: float = 2.15
