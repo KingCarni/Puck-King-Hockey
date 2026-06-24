@@ -2,6 +2,7 @@ extends "res://scripts/hockey/test_rink.gd"
 
 const ICE_TEXTURE_WEBP_PATH: String = "res://assets/art/rink/pkh_ice_surface.webp"
 const ICE_TEXTURE_PNG_PATH: String = "res://assets/art/rink/pkh_ice_surface.png"
+const ICE_TEXTURE_Y: float = 0.082
 
 func _create_ice_surface() -> void:
 	var base_ice: MeshInstance3D = _create_box("IceSurfaceBase", Vector3(RINK_LENGTH, ICE_THICKNESS, RINK_WIDTH), Vector3.ZERO)
@@ -12,16 +13,18 @@ func _create_ice_surface() -> void:
 	if texture == null:
 		return
 
-	var ice_plane: MeshInstance3D = MeshInstance3D.new()
-	ice_plane.name = "IceSurfaceTexturePlane"
-	var plane: PlaneMesh = PlaneMesh.new()
-	plane.size = Vector2(RINK_LENGTH, RINK_WIDTH)
-	plane.subdivide_width = 1
-	plane.subdivide_depth = 1
-	ice_plane.mesh = plane
-	ice_plane.position = Vector3(0.0, LINE_HEIGHT - 0.075, 0.0)
-	ice_plane.material_override = _make_ice_texture_plane_material(texture)
-	world.add_child(ice_plane)
+	var ice_quad: MeshInstance3D = MeshInstance3D.new()
+	ice_quad.name = "IceSurfaceTextureQuad"
+
+	# QuadMesh gives us predictable UVs. Rotate it flat onto the rink so the full image
+	# maps once across the ice instead of relying on BoxMesh face UVs.
+	var quad: QuadMesh = QuadMesh.new()
+	quad.size = Vector2(RINK_LENGTH, RINK_WIDTH)
+	ice_quad.mesh = quad
+	ice_quad.position = Vector3(0.0, ICE_TEXTURE_Y, 0.0)
+	ice_quad.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	ice_quad.material_override = _make_ice_texture_plane_material(texture)
+	world.add_child(ice_quad)
 
 func _create_ice_surface_details() -> void:
 	if _has_ice_texture():
@@ -72,7 +75,7 @@ func _load_ice_texture() -> Texture2D:
 
 func _create_subtle_ice_edge_glow() -> void:
 	var edge_material: StandardMaterial3D = _make_material(Color(0.55, 0.90, 1.0, 0.08), 0.0, 0.36)
-	_create_flat_line("TopIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, LINE_HEIGHT - 0.012, -RINK_WIDTH * 0.5 + 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("BottomIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, LINE_HEIGHT - 0.012, RINK_WIDTH * 0.5 - 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("LeftIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(-RINK_LENGTH * 0.5 + 0.45, LINE_HEIGHT - 0.012, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
-	_create_flat_line("RightIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(RINK_LENGTH * 0.5 - 0.45, LINE_HEIGHT - 0.012, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("TopIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, -RINK_WIDTH * 0.5 + 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("BottomIceTextureGlow", Vector3(RINK_LENGTH - 1.0, 0.012, 0.16), Vector3(0.0, ICE_TEXTURE_Y + 0.006, RINK_WIDTH * 0.5 - 0.45), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("LeftIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(-RINK_LENGTH * 0.5 + 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
+	_create_flat_line("RightIceTextureGlow", Vector3(0.16, 0.012, RINK_WIDTH - 1.0), Vector3(RINK_LENGTH * 0.5 - 0.45, ICE_TEXTURE_Y + 0.006, 0.0), Color(0.55, 0.90, 1.0, 0.08), edge_material)
