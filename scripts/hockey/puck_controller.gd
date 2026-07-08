@@ -109,8 +109,18 @@ func _flat_position(position: Vector3) -> Vector3:
 func _build_placeholder_visuals() -> void:
 	var puck_texture: Texture2D = SkaterSpriteVisuals.load_texture(PUCK_TEXTURE_PATH)
 	if puck_texture != null:
+		var shadow: MeshInstance3D = MeshInstance3D.new()
+		shadow.name = "PuckReadabilityShadow"
+		var shadow_plane: PlaneMesh = PlaneMesh.new()
+		shadow_plane.size = Vector2(1.03, 1.03)
+		shadow.mesh = shadow_plane
+		shadow.position = Vector3(0.07, -0.018, 0.07)
+		shadow.material_override = _make_puck_shadow_material()
+		shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(shadow)
+
 		var plane: PlaneMesh = PlaneMesh.new()
-		plane.size = Vector2(0.85, 0.85)
+		plane.size = Vector2(1.02, 1.02)
 		_puck_mesh.mesh = plane
 		_puck_mesh.position = Vector3(0.0, 0.03, 0.0)
 		_puck_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -118,6 +128,14 @@ func _build_placeholder_visuals() -> void:
 		return
 
 	var puck_material: StandardMaterial3D = StandardMaterial3D.new()
-	puck_material.albedo_color = Color(0.015, 0.015, 0.018, 1.0)
+	puck_material.albedo_color = Color(0.0, 0.0, 0.0, 1.0)
 	puck_material.roughness = 0.28
 	_puck_mesh.material_override = puck_material
+
+func _make_puck_shadow_material() -> StandardMaterial3D:
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = Color(0.0, 0.0, 0.0, 0.30)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
