@@ -11,7 +11,7 @@ const PUCK_Y: float = 0.18
 @export var player_path: NodePath = NodePath("../Player")
 @export var acceleration: float = 13.5
 @export var max_speed: float = 6.1
-@export var friction: float = 5.6
+@export var friction: float = 4.6
 @export var turn_speed: float = 8.0
 @export var board_bounce: float = 0.32
 @export var puck_carry_distance: float = 1.0
@@ -26,6 +26,7 @@ const PUCK_Y: float = 0.18
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.RIGHT
 var _shoot_cooldown_timer: float = 0.0
+var _stagger_timer: float = 0.0
 var _puck: Node = null
 var _player: Node3D = null
 var _base_material: StandardMaterial3D = null
@@ -37,8 +38,16 @@ var _possession_material: StandardMaterial3D = null
 
 func _ready() -> void:
 	_build_placeholder_visuals()
+	add_to_group("checkable")
 	_puck = get_node_or_null(puck_path)
 	_player = get_node_or_null(player_path) as Node3D
+
+func receive_check(direction: Vector3, force: float, checker_velocity: Vector3) -> void:
+	var hit_direction: Vector3 = Vector3(direction.x, 0.0, direction.z)
+	if hit_direction.length_squared() <= 0.001:
+		hit_direction = Vector3.RIGHT
+	_move_velocity = hit_direction.normalized() * force + Vector3(checker_velocity.x, 0.0, checker_velocity.z) * 0.22
+	_stagger_timer = 0.5
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
@@ -49,8 +58,11 @@ func _physics_process(delta: float) -> void:
 
 func _update_timers(delta: float) -> void:
 	_shoot_cooldown_timer = max(_shoot_cooldown_timer - delta, 0.0)
+	_stagger_timer = max(_stagger_timer - delta, 0.0)
 
 func _update_ai(delta: float) -> void:
+	if _stagger_timer > 0.0:
+		return
 	if _puck == null:
 		_apply_friction(delta)
 		return
@@ -62,6 +74,13 @@ func _update_ai(delta: float) -> void:
 	var target_position: Vector3 = _get_puck_position()
 	if _player != null and _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", _player)):
 		target_position = _get_support_position()
+	elif _player != null:
+		# Loose-puck chase: don't stack on the center; shade to open ice.
+		var to_player: Vector3 = _player.global_position - global_position
+		to_player.y = 0.0
+		if to_player.length() < 2.2:
+			var separation: Vector3 = -to_player.normalized() * 2.4
+			target_position += Vector3(0.0, 0.0, separation.z)
 
 	_skate_toward(target_position, delta)
 
@@ -119,8 +138,14 @@ func _get_support_position() -> Vector3:
 	if _player == null:
 		return global_position
 
-	var side: float = -1.0 if _player.global_position.z > 0.0 else 1.0
-	var support: Vector3 = _player.global_position + Vector3(support_distance_x, 0.0, support_distance_z * side)
+	# Stay ahead of the carrier toward the attack (+X), on the opposite
+	# lateral side of the puck, so a pass lane is always open.
+	var puck_z: float = _get_puck_position().z
+	var side: float = -1.0 if puck_z > 0.0 else 1.0
+	var lead_x: float = support_distance_x
+	if _player.global_position.x > RINK_HALF_LENGTH - 6.0:
+		lead_x = 1.0  # deep in the zone: pull level for a one-timer instead of overskating
+	var support: Vector3 = _player.global_position + Vector3(lead_x, 0.0, support_distance_z * side)
 	support.x = clamp(support.x, -RINK_HALF_LENGTH + 1.5, RINK_HALF_LENGTH - 3.0)
 	support.z = clamp(support.z, -RINK_HALF_WIDTH + 1.2, RINK_HALF_WIDTH - 1.2)
 	support.y = PLAYER_Y

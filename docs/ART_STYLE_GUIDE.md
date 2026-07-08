@@ -122,6 +122,10 @@ painting) are PNG. Everything lowercase snake_case, prefixed by category.
 - State feedback is done in-engine by tinting the sprite material — art stays
   neutral (no baked-in stun stars, etc.).
 - Stick blade and gloves get Bone tape highlights so hands/stick read at distance.
+- The sprite is the whole silhouette — sticks, pads and gear live in the artwork,
+  never as separate procedural geometry layered on top.
+- Goalies are ~12% larger than skaters with Bone leg pads, blocker + catch glove,
+  and a caged mask; same team-color and captain/crown language as skaters.
 
 ### 6.2 Rink, boards, glass, nets
 
@@ -189,6 +193,8 @@ painting) are PNG. Everything lowercase snake_case, prefixed by category.
 | Splash logo | `assets/ui/title_screen/pkh_logo_splash.png` | production (AI-painted) |
 | Main menu backdrop | `assets/ui/title_screen/pkh_main_menu.png` | production (AI-painted) |
 | Skater sprites ×4 | `assets/art/characters/pkh_skater_*.svg` | production (vector) |
+| Goalie sprites ×2 | `assets/art/characters/pkh_goalie_*.svg` | production (vector) |
+| Indicator ring | `assets/art/effects/pkh_ring_indicator.svg` | production (vector) |
 | Puck | `assets/art/puck/pkh_puck_topdown.svg` | production (vector) |
 | Goal net top-down | `assets/art/rink/pkh_goal_net_topdown.svg` | production (vector) |
 | Board ad strip | `assets/art/rink/pkh_board_ads.svg` | production (vector) |

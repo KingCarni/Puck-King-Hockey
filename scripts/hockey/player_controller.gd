@@ -1,17 +1,21 @@
 extends CharacterBody3D
 
 const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
+const InputBindings: GDScript = preload("res://scripts/hockey/input/input_bindings.gd")
+const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_input_source.gd")
 
 const RINK_HALF_LENGTH: float = 19.25
 const RINK_HALF_WIDTH: float = 9.25
+const HIT_STOP_TIME_SCALE: float = 0.05
+const HIT_STOP_SECONDS: float = 0.06
 
-@export var acceleration: float = 22.0
-@export var sprint_acceleration: float = 36.0
-@export var max_speed: float = 8.0
+@export var acceleration: float = 19.0
+@export var sprint_acceleration: float = 33.0
+@export var max_speed: float = 8.2
 @export var sprint_max_speed: float = 13.5
-@export var ice_friction: float = 4.5
+@export var ice_friction: float = 3.4
 @export var turn_speed: float = 12.0
-@export var board_bounce: float = 0.28
+@export var board_bounce: float = 0.34
 @export var puck_path: NodePath = NodePath("../Puck")
 @export var puck_carry_distance: float = 1.05
 @export var puck_carry_side_offset: float = 0.18
@@ -23,9 +27,12 @@ const RINK_HALF_WIDTH: float = 9.25
 @export var check_lunge_speed: float = 8.0
 @export var check_hit_radius: float = 1.35
 @export var check_forward_dot: float = 0.18
-@export var check_knockback_force: float = 12.0
+@export var check_knockback_force: float = 14.0
 @export var check_puck_force: float = 12.0
 @export var skater_texture_path: String = "res://assets/art/characters/pkh_skater_home.svg"
+@export var input_prefix: String = "p1"
+@export var teammate_path: NodePath = NodePath("")
+@export var pass_power: float = 0.24
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.FORWARD
@@ -45,17 +52,27 @@ var _charge_meter_back: MeshInstance3D = null
 var _charge_meter_fill: MeshInstance3D = null
 var _charge_fill_material: StandardMaterial3D = null
 
+var _input_source: RefCounted = null
+
 func _ready() -> void:
+	InputBindings.ensure_player_actions()
+	_input_source = HumanInputSource.new(input_prefix)
+	add_to_group("checkable")
 	_build_placeholder_visuals()
 	_build_charge_meter()
 	_puck = get_node_or_null(puck_path)
+
+# Allows AI/network sources to drive this body later.
+func set_input_source(source: RefCounted) -> void:
+	if source != null:
+		_input_source = source
 
 func _physics_process(delta: float) -> void:
 	_update_check_timers(delta)
 	_handle_check_input()
 
 	var input_direction: Vector3 = _get_input_direction()
-	var is_sprinting: bool = Input.is_action_pressed("skate_sprint")
+	var is_sprinting: bool = _input_source.is_sprint_pressed()
 	var target_acceleration: float = sprint_acceleration if is_sprinting else acceleration
 	var target_max_speed: float = sprint_max_speed if is_sprinting else max_speed
 
@@ -77,7 +94,7 @@ func _physics_process(delta: float) -> void:
 	_update_check_visuals()
 
 func _get_input_direction() -> Vector3:
-	var input_vector: Vector2 = Input.get_vector("skate_left", "skate_right", "skate_up", "skate_down")
+	var input_vector: Vector2 = _input_source.get_move_vector()
 	if input_vector.length_squared() <= 0.0:
 		return Vector3.ZERO
 
@@ -112,7 +129,7 @@ func _update_check_timers(delta: float) -> void:
 	_check_active_timer = max(_check_active_timer - delta, 0.0)
 
 func _handle_check_input() -> void:
-	if not Input.is_action_just_pressed("body_check"):
+	if not _input_source.is_check_just_pressed():
 		return
 
 	if _check_cooldown_timer > 0.0:
@@ -155,7 +172,24 @@ func _update_check_collision() -> void:
 
 		_has_hit_during_check = true
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
+		_trigger_hit_stop()
 		return
+
+# NHL Hitz-style impact freeze: a few real-time milliseconds of slow-mo.
+func _trigger_hit_stop() -> void:
+	if Engine.time_scale < 1.0:
+		return
+	Engine.time_scale = HIT_STOP_TIME_SCALE
+	var timer: SceneTreeTimer = get_tree().create_timer(HIT_STOP_SECONDS, true, false, true)
+	timer.timeout.connect(func() -> void: Engine.time_scale = 1.0)
+
+func receive_check(direction: Vector3, force: float, checker_velocity: Vector3) -> void:
+	var hit_direction: Vector3 = Vector3(direction.x, 0.0, direction.z)
+	if hit_direction.length_squared() <= 0.001:
+		hit_direction = Vector3.RIGHT
+	var inherited_velocity: Vector3 = Vector3(checker_velocity.x, 0.0, checker_velocity.z) * 0.22
+	_move_velocity = hit_direction.normalized() * force + inherited_velocity
+	_cancel_shot_charge()
 
 func _update_check_visuals() -> void:
 	if _body_material == null or _checking_material == null:
@@ -175,21 +209,45 @@ func _update_puck_interaction(delta: float) -> void:
 		_puck.call("take_possession", self)
 
 	if _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", self)):
+		if _try_pass():
+			return
 		_update_shot_charge(delta)
 		var carry_target: Vector3 = _get_puck_carry_position()
 		_puck.call("update_possession", carry_target, _move_velocity, delta)
 	else:
 		_cancel_shot_charge()
 
+func _try_pass() -> bool:
+	if not _input_source.is_pass_just_pressed():
+		return false
+	if teammate_path.is_empty():
+		return false
+	var teammate: Node3D = get_node_or_null(teammate_path) as Node3D
+	if teammate == null:
+		return false
+
+	var teammate_velocity: Vector3 = Vector3.ZERO
+	var raw_velocity: Variant = teammate.get("_move_velocity")
+	if raw_velocity is Vector3:
+		teammate_velocity = raw_velocity
+	var lead_target: Vector3 = teammate.global_position + teammate_velocity * 0.30
+	var pass_direction: Vector3 = Vector3(lead_target.x - global_position.x, 0.0, lead_target.z - global_position.z)
+	if pass_direction.length_squared() <= 0.001:
+		return false
+
+	_puck.call("shoot", pass_direction.normalized(), _move_velocity, pass_power)
+	_cancel_shot_charge()
+	return true
+
 func _update_shot_charge(delta: float) -> void:
-	if Input.is_action_just_pressed("puck_shoot"):
+	if _input_source.is_shoot_just_pressed():
 		_is_charging_shot = true
 		_shot_charge_time = 0.0
 
-	if _is_charging_shot and Input.is_action_pressed("puck_shoot"):
+	if _is_charging_shot and _input_source.is_shoot_pressed():
 		_shot_charge_time = min(_shot_charge_time + delta, slap_shot_charge_seconds)
 
-	if _is_charging_shot and Input.is_action_just_released("puck_shoot"):
+	if _is_charging_shot and _input_source.is_shoot_just_released():
 		_release_charged_shot()
 		return
 

@@ -11,7 +11,7 @@ const PUCK_Y: float = 0.18
 @export var player_path: NodePath = NodePath("../Player")
 @export var acceleration: float = 15.0
 @export var max_speed: float = 6.6
-@export var friction: float = 5.8
+@export var friction: float = 4.6
 @export var turn_speed: float = 8.0
 @export var board_bounce: float = 0.35
 @export var puck_pickup_radius: float = 1.05
@@ -24,6 +24,10 @@ const PUCK_Y: float = 0.18
 @export var pressure_poke_force: float = 8.5
 @export var stun_seconds: float = 0.65
 @export var skater_texture_path: String = "res://assets/art/characters/pkh_skater_away.svg"
+## Same-team center this skater supports when the ally has the puck.
+@export var ally_path: NodePath = NodePath("")
+@export var support_distance_x: float = 3.0
+@export var support_distance_z: float = 2.5
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.LEFT
@@ -32,6 +36,7 @@ var _shoot_cooldown_timer: float = 0.0
 var _poke_cooldown_timer: float = 0.0
 var _puck: Node = null
 var _player: Node3D = null
+var _ally: Node3D = null
 var _base_material: StandardMaterial3D = null
 var _stun_material: StandardMaterial3D = null
 var _possession_material: StandardMaterial3D = null
@@ -45,6 +50,7 @@ func _ready() -> void:
 	add_to_group("checkable")
 	_puck = get_node_or_null(puck_path)
 	_player = get_node_or_null(player_path) as Node3D
+	_ally = get_node_or_null(ally_path) as Node3D
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
@@ -85,12 +91,37 @@ func _update_ai(delta: float) -> void:
 		_drive_with_puck(delta)
 		return
 
+	if _ally != null and _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", _ally)):
+		_skate_toward(_get_ally_support_position(), delta)
+		return
+
 	var target_position: Vector3 = _get_puck_position()
 	if _player != null and _is_player_pressure_more_important():
 		target_position = _player.global_position
+	elif _ally != null:
+		# Loose-puck chase: don't stack on the ally center.
+		var to_ally: Vector3 = _ally.global_position - global_position
+		to_ally.y = 0.0
+		if to_ally.length() < 2.2:
+			target_position.z += -signf(to_ally.z) * 2.4 if absf(to_ally.z) > 0.05 else 2.4
 
 	_skate_toward(target_position, delta)
 	_try_poke_player_puck()
+
+# Support the ally carrier: ahead toward the away attack (-X), on the
+# opposite lateral side of the puck so a pass lane stays open.
+func _get_ally_support_position() -> Vector3:
+	if _ally == null:
+		return global_position
+	var side: float = -1.0 if _get_puck_position().z > 0.0 else 1.0
+	var lead_x: float = -support_distance_x
+	if _ally.global_position.x < -RINK_HALF_LENGTH + 6.0:
+		lead_x = -1.0
+	var support: Vector3 = _ally.global_position + Vector3(lead_x, 0.0, support_distance_z * side)
+	support.x = clamp(support.x, -RINK_HALF_LENGTH + 3.0, RINK_HALF_LENGTH - 1.5)
+	support.z = clamp(support.z, -RINK_HALF_WIDTH + 1.2, RINK_HALF_WIDTH - 1.2)
+	support.y = PLAYER_Y
+	return support
 
 func _drive_with_puck(delta: float) -> void:
 	var attack_target: Vector3 = Vector3(-RINK_HALF_LENGTH + 1.0, PLAYER_Y, 0.0)

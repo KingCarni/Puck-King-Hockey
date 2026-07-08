@@ -5,6 +5,7 @@ const REWARD_DRAFT_SCENE: PackedScene = preload("res://scenes/ui/RewardDraft.tsc
 const PAUSE_MENU_SCENE: PackedScene = preload("res://scenes/ui/PauseMenu.tscn")
 const GAME_OVER_SCENE: PackedScene = preload("res://scenes/ui/GameOver.tscn")
 const MatchClockScript: GDScript = preload("res://scripts/match/match_clock.gd")
+const PossessionIndicatorsScript: GDScript = preload("res://scripts/match/possession_indicators.gd")
 const MAIN_MENU_PATH: String = "res://scenes/ui/MainMenu.tscn"
 
 const RINK_LENGTH: float = 34.0
@@ -59,15 +60,25 @@ var _match_clock: Node = null
 @onready var world: Node3D = $World
 @onready var camera: Camera3D = $CameraRig/IsometricCamera
 @onready var _player: Node3D = $Player
-@onready var _away_ai: Node3D = $AwayAI
 @onready var _puck: Node3D = $Puck
 @onready var _home_spawn: Marker3D = $SpawnPoints/HomeSpawn
 @onready var _away_spawn: Marker3D = $SpawnPoints/AwaySpawn
 @onready var _puck_spawn: Marker3D = $SpawnPoints/PuckSpawn
 
+# Away center: human Player2 in local multiplayer, or the legacy AwayAI node.
+var _away_skater: Node3D = null
+var _home_goalie: Node3D = null
+var _away_goalie: Node3D = null
+
 func _ready() -> void:
+	_away_skater = get_node_or_null("Player2")
+	if _away_skater == null:
+		_away_skater = get_node_or_null("AwayAI")
+	_home_goalie = get_node_or_null("HomeGoalie")
+	_away_goalie = get_node_or_null("AwayGoalie")
 	_configure_camera()
 	_build_test_rink()
+	_build_possession_indicators()
 	_build_ui()
 	_build_match_clock()
 	_reset_faceoff(false)
@@ -86,6 +97,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause_menu"):
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
+
+func _build_possession_indicators() -> void:
+	var indicators: Node3D = Node3D.new()
+	indicators.name = "PossessionIndicators"
+	indicators.set_script(PossessionIndicatorsScript)
+	add_child(indicators)
+
+	var players: Array = [{"node": _player, "color": Color(0.18, 0.55, 1.0, 0.85)}]
+	# Ring the away center too when it is human-controlled (has an input prefix).
+	if _away_skater != null and _away_skater.get("input_prefix") != null:
+		players.append({"node": _away_skater, "color": Color(1.0, 0.20, 0.22, 0.85)})
+	indicators.call("setup", _puck, players)
 
 func _build_ui() -> void:
 	_hud = MATCH_HUD_SCENE.instantiate()
@@ -303,12 +326,21 @@ func _reset_faceoff(clear_puck: bool) -> void:
 	_player.set("_check_active_timer", 0.0)
 	_player.set("_check_cooldown_timer", 0.0)
 
-	_away_ai.global_position = _away_spawn.global_position
-	_away_ai.global_position.y = PLAYER_Y
-	_away_ai.set("_move_velocity", Vector3.ZERO)
-	_away_ai.set("_last_facing_direction", Vector3.LEFT)
-	_away_ai.set("_stun_timer", 0.0)
-	_away_ai.set("_shoot_cooldown_timer", 0.0)
+	if _away_skater != null:
+		_away_skater.global_position = _away_spawn.global_position
+		_away_skater.global_position.y = PLAYER_Y
+		_away_skater.set("velocity", Vector3.ZERO)
+		_away_skater.set("_move_velocity", Vector3.ZERO)
+		_away_skater.set("_last_facing_direction", Vector3.LEFT)
+		_away_skater.set("_stun_timer", 0.0)
+		_away_skater.set("_shoot_cooldown_timer", 0.0)
+		_away_skater.set("_check_active_timer", 0.0)
+		_away_skater.set("_check_cooldown_timer", 0.0)
+
+	if _home_goalie != null and _home_goalie.has_method("reset_to_center"):
+		_home_goalie.call("reset_to_center")
+	if _away_goalie != null and _away_goalie.has_method("reset_to_center"):
+		_away_goalie.call("reset_to_center")
 
 	if clear_puck:
 		_reset_puck_to_center()
@@ -321,9 +353,15 @@ func _reset_puck_to_center() -> void:
 	_puck.set("_is_possessed", false)
 
 func _set_match_enabled(is_enabled: bool) -> void:
-	_player.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
-	_away_ai.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
-	_puck.process_mode = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
+	var mode: int = Node.PROCESS_MODE_INHERIT if is_enabled else Node.PROCESS_MODE_DISABLED
+	_player.process_mode = mode
+	if _away_skater != null:
+		_away_skater.process_mode = mode
+	if _home_goalie != null:
+		_home_goalie.process_mode = mode
+	if _away_goalie != null:
+		_away_goalie.process_mode = mode
+	_puck.process_mode = mode
 
 func _update_upgrade_display() -> void:
 	if _hud != null:
@@ -339,7 +377,6 @@ func _build_test_rink() -> void:
 	_create_boards()
 	_create_glass_posts()
 	_create_goals()
-	_create_spawn_markers()
 
 func _create_floor_backdrop() -> void:
 	var floor: MeshInstance3D = _create_box("DarkArenaFloor", Vector3(RINK_LENGTH + 8.0, 0.08, RINK_WIDTH + 8.0), Vector3.ZERO)
@@ -532,17 +569,6 @@ func _create_goals() -> void:
 
 		net.material_override = net_material
 		goal.add_child(net)
-
-func _create_spawn_markers() -> void:
-	var marker_paths: Array[String] = ["../SpawnPoints/HomeSpawn", "../SpawnPoints/AwaySpawn", "../SpawnPoints/PuckSpawn"]
-
-	for marker_path: String in marker_paths:
-		var marker: Node3D = world.get_node_or_null(marker_path) as Node3D
-		if marker == null:
-			continue
-		var marker_visual: MeshInstance3D = _create_cylinder("SpawnMarkerVisual", 0.22, 0.035, marker.global_position)
-		marker_visual.material_override = _make_material(Color(1.0, 0.85, 0.2, 1.0), 0.0, 0.35)
-		world.add_child(marker_visual)
 
 func _create_flat_line(node_name: String, size: Vector3, position: Vector3, color: Color, material: StandardMaterial3D = null) -> void:
 	var line: MeshInstance3D = _create_box(node_name, size, position)
