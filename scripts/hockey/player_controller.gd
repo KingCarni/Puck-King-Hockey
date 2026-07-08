@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
+
 const RINK_HALF_LENGTH: float = 19.25
 const RINK_HALF_WIDTH: float = 9.25
 
@@ -23,6 +25,7 @@ const RINK_HALF_WIDTH: float = 9.25
 @export var check_forward_dot: float = 0.18
 @export var check_knockback_force: float = 12.0
 @export var check_puck_force: float = 12.0
+@export var skater_texture_path: String = "res://assets/art/characters/pkh_skater_home.svg"
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.FORWARD
@@ -226,6 +229,14 @@ func _get_facing_direction() -> Vector3:
 	return facing_direction.normalized()
 
 func _build_placeholder_visuals() -> void:
+	var skater_texture: Texture2D = SkaterSpriteVisuals.load_texture(skater_texture_path)
+	if skater_texture != null:
+		SkaterSpriteVisuals.apply_skater_sprite(_body_mesh, _direction_marker)
+		_body_material = SkaterSpriteVisuals.make_sprite_material(skater_texture)
+		_checking_material = SkaterSpriteVisuals.make_sprite_material(skater_texture, Color(1.55, 1.65, 2.10, 1.0))
+		_body_mesh.material_override = _body_material
+		return
+
 	_body_material = StandardMaterial3D.new()
 	_body_material.albedo_color = Color(0.08, 0.34, 1.0, 1.0)
 	_body_material.roughness = 0.35

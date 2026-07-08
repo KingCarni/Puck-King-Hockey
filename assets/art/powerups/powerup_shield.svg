@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Shield (defense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#332A10"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFEB4D"/>
+      <stop offset="0.5" stop-color="#FFC71A"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- aura -->
+  <path d="M128 34 L204 60 L204 128 Q204 186 128 218 Q52 186 52 128 L52 60 Z" fill="#8CE6FF" opacity="0.18"/>
+  <!-- shield -->
+  <path d="M128 44 L194 66 L194 126 Q194 178 128 206 Q62 178 62 126 L62 66 Z"
+        fill="url(#plate)" stroke="#141417" stroke-width="11" stroke-linejoin="round"/>
+  <path d="M128 58 L180 76 L180 124 Q180 166 128 190 Z" fill="#FFEB4D" opacity="0.5"/>
+  <!-- crown emblem -->
+  <path d="M100 142 L100 104 L114 118 L128 94 L142 118 L156 104 L156 142 Z"
+        fill="#D91A21" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="100" y="134" width="56" height="12" rx="5" fill="#8F0D12" stroke="#141417" stroke-width="5"/>
+  <!-- rivets -->
+  <circle cx="76" cy="76" r="6" fill="#141417"/>
+  <circle cx="180" cy="76" r="6" fill="#141417"/>
+  <circle cx="128" cy="196" r="6" fill="#141417"/>
+</svg>

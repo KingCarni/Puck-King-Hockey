@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 560">
+  <!-- Puck King Hell — goal net, top-down, opening faces image-top -->
+  <defs>
+    <linearGradient id="pipe" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F0453F"/>
+      <stop offset="0.5" stop-color="#D91A21"/>
+      <stop offset="1" stop-color="#8F0D12"/>
+    </linearGradient>
+    <linearGradient id="pipeH" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F0453F"/>
+      <stop offset="0.5" stop-color="#D91A21"/>
+      <stop offset="1" stop-color="#8F0D12"/>
+    </linearGradient>
+    <radialGradient id="mouth" cx="0.5" cy="0.28" r="0.9">
+      <stop offset="0" stop-color="#1E2A3A" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#080A0E" stop-opacity="0.85"/>
+    </radialGradient>
+  </defs>
+
+  <!-- interior darkness (the goal reads as a hole) -->
+  <path d="M96 60 L928 60 L888 500 Q884 528 852 528 L172 528 Q140 528 136 500 Z" fill="url(#mouth)"/>
+
+  <!-- netting: diamond grid -->
+  <g stroke="#F7F5EB" stroke-width="7" opacity="0.66">
+    <path d="M96 60 L512 528 L928 60" fill="none"/>
+    <path d="M200 60 L560 470 M304 60 L660 460 M408 60 L760 450 M512 60 L850 440" fill="none"/>
+    <path d="M824 60 L464 470 M720 60 L364 460 M616 60 L264 450 M512 60 L174 440" fill="none"/>
+    <path d="M136 260 Q512 330 888 260" fill="none"/>
+    <path d="M152 400 Q512 470 872 400" fill="none"/>
+  </g>
+  <!-- mesh sag shading -->
+  <path d="M136 470 Q512 545 888 470 L888 500 Q884 528 852 528 L172 528 Q140 528 136 500 Z" fill="#F7F5EB" opacity="0.10"/>
+
+  <!-- back + side frame pipes -->
+  <path d="M120 42 Q84 42 88 88 L130 480 Q136 540 196 540 L828 540 Q888 540 894 480 L936 88 Q940 42 904 42" fill="none" stroke="#141417" stroke-width="52" stroke-linecap="round"/>
+  <path d="M120 42 Q84 42 88 88 L130 480 Q136 540 196 540 L828 540 Q888 540 894 480 L936 88 Q940 42 904 42" fill="none" stroke="url(#pipeH)" stroke-width="34" stroke-linecap="round"/>
+  <!-- pipe cel highlight -->
+  <path d="M196 522 L828 522" stroke="#FF7A70" stroke-width="9" stroke-linecap="round" opacity="0.75"/>
+
+  <!-- goal mouth crossbar (image-top) -->
+  <rect x="60" y="18" width="904" height="66" rx="33" fill="#141417"/>
+  <rect x="72" y="28" width="880" height="46" rx="23" fill="url(#pipeH)"/>
+  <rect x="96" y="34" width="832" height="12" rx="6" fill="#FF7A70" opacity="0.8"/>
+  <!-- post caps -->
+  <circle cx="96" cy="51" r="42" fill="#141417"/>
+  <circle cx="96" cy="51" r="30" fill="url(#pipe)"/>
+  <circle cx="88" cy="42" r="9" fill="#FF9A92" opacity="0.9"/>
+  <circle cx="928" cy="51" r="42" fill="#141417"/>
+  <circle cx="928" cy="51" r="30" fill="url(#pipe)"/>
+  <circle cx="920" cy="42" r="9" fill="#FF9A92" opacity="0.9"/>
+</svg>

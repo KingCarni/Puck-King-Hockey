@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 128">
+  <!-- Puck King Hell — seamless board advertisement strip (icon sponsors, tiles horizontally) -->
+  <defs>
+    <linearGradient id="panelDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B1B20"/>
+      <stop offset="1" stop-color="#0D0D0F"/>
+    </linearGradient>
+    <linearGradient id="panelRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D91A21"/>
+      <stop offset="1" stop-color="#8F0D12"/>
+    </linearGradient>
+    <linearGradient id="panelBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E8CFF"/>
+      <stop offset="1" stop-color="#173F82"/>
+    </linearGradient>
+    <linearGradient id="panelGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC71A"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="2048" height="128" fill="url(#panelDark)"/>
+
+  <!-- panel 1: crown league mark on black -->
+  <g>
+    <rect x="8" y="10" width="240" height="108" rx="12" fill="url(#panelDark)" stroke="#8C949E" stroke-width="4"/>
+    <path d="M92 88 L92 52 L108 66 L128 40 L148 66 L164 52 L164 88 Z" fill="#FFC71A" stroke="#141417" stroke-width="5"/>
+    <rect x="92" y="82" width="72" height="10" rx="4" fill="#FFEB4D"/>
+  </g>
+
+  <!-- panel 2: turbo skate bolt on blue -->
+  <g>
+    <rect x="264" y="10" width="240" height="108" rx="12" fill="url(#panelBlue)" stroke="#141417" stroke-width="4"/>
+    <path d="M400 24 L344 72 L376 72 L356 106 L420 56 L386 56 Z" fill="#FFEB4D" stroke="#141417" stroke-width="5" stroke-linejoin="round"/>
+    <rect x="292" y="88" width="72" height="10" rx="5" fill="#F7F5EB" opacity="0.85"/>
+    <rect x="292" y="70" width="48" height="10" rx="5" fill="#F7F5EB" opacity="0.6"/>
+  </g>
+
+  <!-- panel 3: flame on red (HELL ARENA) -->
+  <g>
+    <rect x="520" y="10" width="240" height="108" rx="12" fill="url(#panelRed)" stroke="#141417" stroke-width="4"/>
+    <path d="M640 26 Q660 52 648 66 Q668 62 672 46 Q690 74 674 96 Q660 112 640 112 Q620 112 606 96 Q590 74 608 46 Q612 62 632 66 Q620 52 640 26 Z" fill="#FFC71A" stroke="#141417" stroke-width="5"/>
+    <path d="M640 58 Q650 74 644 84 Q656 88 646 102 Q640 106 634 102 Q624 88 636 84 Q630 74 640 58 Z" fill="#FF382E"/>
+  </g>
+
+  <!-- panel 4: puck + star on bone -->
+  <g>
+    <rect x="776" y="10" width="240" height="108" rx="12" fill="#F7F5EB" stroke="#141417" stroke-width="4"/>
+    <ellipse cx="856" cy="70" rx="44" ry="20" fill="#0D0D0F"/>
+    <ellipse cx="856" cy="60" rx="44" ry="20" fill="#2B2B31" stroke="#141417" stroke-width="4"/>
+    <path d="M948 36 L958 58 L982 60 L964 76 L970 100 L948 87 L926 100 L932 76 L914 60 L938 58 Z" fill="#D91A21" stroke="#141417" stroke-width="4"/>
+  </g>
+
+  <!-- panel 5: snowflake on dark blue (FROSTBITE) -->
+  <g>
+    <rect x="1032" y="10" width="240" height="108" rx="12" fill="#10233F" stroke="#2E8CFF" stroke-width="4"/>
+    <g stroke="#8CE6FF" stroke-width="8" stroke-linecap="round">
+      <line x1="1152" y1="28" x2="1152" y2="100"/>
+      <line x1="1121" y1="46" x2="1183" y2="82"/>
+      <line x1="1121" y1="82" x2="1183" y2="46"/>
+      <line x1="1152" y1="40" x2="1140" y2="30"/>
+      <line x1="1152" y1="40" x2="1164" y2="30"/>
+      <line x1="1152" y1="88" x2="1140" y2="98"/>
+      <line x1="1152" y1="88" x2="1164" y2="98"/>
+    </g>
+    <circle cx="1152" cy="64" r="10" fill="#F7F5EB"/>
+  </g>
+
+  <!-- panel 6: crossed sticks on gold -->
+  <g>
+    <rect x="1288" y="10" width="240" height="108" rx="12" fill="url(#panelGold)" stroke="#141417" stroke-width="4"/>
+    <g stroke="#141417" stroke-width="14" stroke-linecap="round">
+      <line x1="1354" y1="30" x2="1446" y2="98"/>
+      <line x1="1446" y1="30" x2="1354" y2="98"/>
+    </g>
+    <rect x="1330" y="90" width="40" height="18" rx="9" fill="#141417"/>
+    <rect x="1430" y="90" width="40" height="18" rx="9" fill="#141417"/>
+    <circle cx="1400" cy="64" r="12" fill="#0D0D0F"/>
+  </g>
+
+  <!-- panel 7: shield on steel -->
+  <g>
+    <rect x="1544" y="10" width="240" height="108" rx="12" fill="#3A4048" stroke="#8C949E" stroke-width="4"/>
+    <path d="M1664 24 L1706 38 L1706 72 Q1706 98 1664 108 Q1622 98 1622 72 L1622 38 Z" fill="#8C949E" stroke="#141417" stroke-width="5"/>
+    <path d="M1664 34 L1696 44 L1696 70 Q1696 90 1664 98 Z" fill="#B7BEC7"/>
+    <rect x="1656" y="52" width="16" height="34" rx="6" fill="#D91A21"/>
+  </g>
+
+  <!-- panel 8: rocket on black (ROCKET SHOT) -->
+  <g>
+    <rect x="1800" y="10" width="240" height="108" rx="12" fill="url(#panelDark)" stroke="#D91A21" stroke-width="4"/>
+    <g transform="rotate(-35 1920 64)">
+      <rect x="1884" y="48" width="76" height="32" rx="16" fill="#F7F5EB" stroke="#141417" stroke-width="5"/>
+      <path d="M1960 48 L1984 64 L1960 80 Z" fill="#D91A21" stroke="#141417" stroke-width="5"/>
+      <path d="M1884 52 L1868 64 L1884 76 Z" fill="#FFC71A"/>
+      <circle cx="1930" cy="64" r="8" fill="#2E8CFF"/>
+    </g>
+    <circle cx="1854" cy="96" r="6" fill="#FFC71A" opacity="0.9"/>
+    <circle cx="1840" cy="104" r="4" fill="#FF382E" opacity="0.8"/>
+  </g>
+
+  <!-- top and bottom rails (tile seamlessly) -->
+  <rect x="0" y="0" width="2048" height="6" fill="#8C949E"/>
+  <rect x="0" y="122" width="2048" height="6" fill="#8C949E"/>
+</svg>

@@ -423,14 +423,16 @@ func set_upgrades(upgrade_entries: Array) -> void:
 	for entry in upgrade_entries:
 		var label_text: String = ""
 		var glyph: String = "\u26A1"
+		var icon_path: String = ""
 		if entry is Dictionary:
 			label_text = String(entry.get("title", "UPGRADE"))
 			glyph = String(entry.get("glyph", "\u26A1"))
+			icon_path = String(entry.get("icon", ""))
 		else:
 			label_text = String(entry)
-		_upgrades_list.add_child(_make_upgrade_pill(label_text, glyph))
+		_upgrades_list.add_child(_make_upgrade_pill(label_text, glyph, icon_path))
 
-func _make_upgrade_pill(text: String, glyph: String) -> Control:
+func _make_upgrade_pill(text: String, glyph: String, icon_path: String = "") -> Control:
 	var pill: PanelContainer = PanelContainer.new()
 	pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -450,9 +452,22 @@ func _make_upgrade_pill(text: String, glyph: String) -> Control:
 	row.add_theme_constant_override("separation", 10)
 	pill.add_child(row)
 
-	var icon: Label = Label.new()
-	icon.text = glyph
-	row.add_child(icon)
+	var icon_texture: Texture2D = null
+	if icon_path != "" and ResourceLoader.exists(icon_path):
+		icon_texture = load(icon_path) as Texture2D
+
+	var icon: Label = null
+	if icon_texture != null:
+		var icon_rect: TextureRect = TextureRect.new()
+		icon_rect.texture = icon_texture
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.custom_minimum_size = Vector2(34.0, 34.0)
+		row.add_child(icon_rect)
+	else:
+		icon = Label.new()
+		icon.text = glyph
+		row.add_child(icon)
 
 	var label: Label = Label.new()
 	label.text = text.to_upper()
@@ -460,7 +475,8 @@ func _make_upgrade_pill(text: String, glyph: String) -> Control:
 	row.add_child(label)
 
 	if _palette != null:
-		_palette.style_accent_label(icon, 22, _palette.COLOR_HOT_GOLD)
+		if icon != null:
+			_palette.style_accent_label(icon, 22, _palette.COLOR_HOT_GOLD)
 		_palette.style_accent_label(label, 20, _palette.COLOR_BONE)
 
 	pill.modulate.a = 0.0

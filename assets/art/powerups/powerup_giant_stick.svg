@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Giant Stick (offense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#3A1114"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- giant stick diagonal -->
+  <path d="M66 48 L164 172" stroke="#141417" stroke-width="42" stroke-linecap="round"/>
+  <path d="M66 48 L164 172" stroke="#C98A3B" stroke-width="26" stroke-linecap="round"/>
+  <!-- tape wraps on shaft -->
+  <g stroke="#F7F5EB" stroke-width="9">
+    <line x1="84" y1="60" x2="104" y2="44"/>
+    <line x1="98" y1="78" x2="118" y2="62"/>
+  </g>
+  <!-- huge blade -->
+  <path d="M150 154 L216 178 Q234 186 230 204 L226 216 Q222 228 206 224 L136 200 Z"
+        fill="#C98A3B" stroke="#141417" stroke-width="11" stroke-linejoin="round"/>
+  <path d="M160 170 L212 188" stroke="#F7F5EB" stroke-width="9" stroke-linecap="round"/>
+  <!-- growth arrows -->
+  <path d="M56 176 L56 216 M56 216 L42 202 M56 216 L70 202" stroke="#FF382E" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <path d="M200 64 L200 34 M200 34 L188 46 M200 34 L212 46" stroke="#FF382E" stroke-width="9" stroke-linecap="round" fill="none"/>
+</svg>

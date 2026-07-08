@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Magnet Puck (utility) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#241138"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- horseshoe magnet -->
+  <path d="M78 58 L78 128 Q78 168 128 168 Q178 168 178 128 L178 58 L142 58 L142 124 Q142 134 128 134 Q114 134 114 124 L114 58 Z"
+        fill="#D91A21" stroke="#141417" stroke-width="10" stroke-linejoin="round"/>
+  <rect x="78" y="58" width="36" height="26" fill="#F7F5EB" stroke="#141417" stroke-width="8"/>
+  <rect x="142" y="58" width="36" height="26" fill="#F7F5EB" stroke="#141417" stroke-width="8"/>
+  <!-- field arcs -->
+  <path d="M96 178 Q128 206 160 178" fill="none" stroke="#9B4DFF" stroke-width="8" stroke-linecap="round" opacity="0.9"/>
+  <path d="M84 190 Q128 226 172 190" fill="none" stroke="#9B4DFF" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <!-- puck being pulled -->
+  <ellipse cx="128" cy="208" rx="34" ry="15" fill="#0D0D0F"/>
+  <ellipse cx="128" cy="200" rx="34" ry="15" fill="#2B2B31" stroke="#141417" stroke-width="6"/>
+</svg>

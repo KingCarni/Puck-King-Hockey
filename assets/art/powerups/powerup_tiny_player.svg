@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Tiny Player (chaos) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#241138"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- shrink arrows pointing inward -->
+  <g stroke="#9B4DFF" stroke-width="10" stroke-linecap="round" fill="none">
+    <path d="M52 52 L86 86 M86 86 L86 62 M86 86 L62 86"/>
+    <path d="M204 52 L170 86 M170 86 L170 62 M170 86 L194 86"/>
+    <path d="M52 204 L86 170 M86 170 L62 170 M86 170 L86 194"/>
+    <path d="M204 204 L170 170 M170 170 L170 194 M170 170 L194 170"/>
+  </g>
+  <!-- tiny skater -->
+  <ellipse cx="128" cy="176" rx="40" ry="10" fill="#000000" opacity="0.3"/>
+  <rect x="104" y="118" width="48" height="44" rx="18" fill="#9B4DFF" stroke="#141417" stroke-width="8"/>
+  <circle cx="128" cy="106" r="22" fill="#6E2FC9" stroke="#141417" stroke-width="8"/>
+  <rect x="122" y="86" width="12" height="24" rx="6" fill="#B57BFF"/>
+  <line x1="150" y1="132" x2="176" y2="150" stroke="#141417" stroke-width="7" stroke-linecap="round"/>
+  <rect x="170" y="146" width="22" height="10" rx="5" fill="#C98A3B" stroke="#141417" stroke-width="5"/>
+  <rect x="108" y="158" width="16" height="14" rx="6" fill="#141417"/>
+  <rect x="132" y="158" width="16" height="14" rx="6" fill="#141417"/>
+</svg>

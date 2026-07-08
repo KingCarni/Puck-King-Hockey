@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: play -->
+  <path d="M40 26 Q40 18 48 22 L104 58 Q112 64 104 70 L48 106 Q40 110 40 102 Z"
+        fill="#F7F5EB" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M50 38 L88 62 L50 88 Z" fill="#FFC71A" opacity="0.35"/>
+</svg>

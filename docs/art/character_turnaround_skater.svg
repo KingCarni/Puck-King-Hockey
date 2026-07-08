@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 960" font-family="Arial Black, Arial, sans-serif">
+  <!-- Puck King Hell — skater character turnaround (concept reference, not imported by Godot) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141417"/>
+      <stop offset="1" stop-color="#0D0D0F"/>
+    </linearGradient>
+    <linearGradient id="jb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4DA0FF"/>
+      <stop offset="1" stop-color="#1E63C8"/>
+    </linearGradient>
+    <linearGradient id="jr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF5C55"/>
+      <stop offset="1" stop-color="#C01218"/>
+    </linearGradient>
+  </defs>
+  <rect width="1680" height="960" fill="url(#bg)"/>
+  <rect x="24" y="24" width="1632" height="912" fill="none" stroke="#FFC71A" stroke-width="6" rx="18"/>
+
+  <text x="60" y="92" fill="#F7F5EB" font-size="44" letter-spacing="2">PUCK KING HELL — SKATER TURNAROUND</text>
+  <text x="60" y="132" fill="#8C949E" font-size="22">HOME COLORWAY · 2.5 HEADS TALL · OVERSIZED GEAR · INK OUTLINES 4-5% OF WIDTH</text>
+
+  <!-- guide lines -->
+  <g stroke="#8C949E" stroke-width="1" opacity="0.35">
+    <line x1="80" y1="240" x2="1240" y2="240"/>
+    <line x1="80" y1="352" x2="1240" y2="352"/>
+    <line x1="80" y1="560" x2="1240" y2="560"/>
+    <line x1="80" y1="760" x2="1240" y2="760"/>
+  </g>
+  <g fill="#8C949E" font-size="16" opacity="0.7">
+    <text x="84" y="232">HELMET TOP</text>
+    <text x="84" y="344">SHOULDER LINE</text>
+    <text x="84" y="552">WAIST</text>
+    <text x="84" y="752">ICE</text>
+  </g>
+
+  <!-- ============ FRONT VIEW ============ -->
+  <g transform="translate(240 0)">
+    <text x="0" y="810" fill="#FFC71A" font-size="26" text-anchor="middle" transform="translate(0 0)">FRONT</text>
+    <!-- skates -->
+    <rect x="-78" y="716" width="64" height="34" rx="14" fill="#141417"/>
+    <rect x="14" y="716" width="64" height="34" rx="14" fill="#141417"/>
+    <rect x="-74" y="748" width="56" height="8" rx="4" fill="#8C949E"/>
+    <rect x="18" y="748" width="56" height="8" rx="4" fill="#8C949E"/>
+    <!-- legs / socks -->
+    <rect x="-62" y="600" width="52" height="126" rx="22" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="10" y="600" width="52" height="126" rx="22" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="-62" y="648" width="52" height="16" fill="#F7F5EB"/>
+    <rect x="10" y="648" width="52" height="16" fill="#F7F5EB"/>
+    <!-- pants -->
+    <rect x="-78" y="520" width="156" height="104" rx="34" fill="#141417" stroke="#0D0D0F" stroke-width="6"/>
+    <!-- torso -->
+    <path d="M-96 360 Q-100 336 -72 330 L72 330 Q100 336 96 360 L82 540 L-82 540 Z" fill="url(#jb)" stroke="#141417" stroke-width="10"/>
+    <!-- yoke -->
+    <path d="M-96 360 Q-100 336 -72 330 L72 330 Q100 336 96 360 L90 396 Q0 372 -90 396 Z" fill="#173F82"/>
+    <!-- chest crown logo -->
+    <path d="M-30 470 L-30 434 L-15 448 L0 424 L15 448 L30 434 L30 470 Z" fill="#FFC71A" stroke="#141417" stroke-width="6"/>
+    <!-- arms -->
+    <rect x="-134" y="352" width="46" height="150" rx="23" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="88" y="352" width="46" height="150" rx="23" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <circle cx="-111" cy="522" r="30" fill="#141417"/>
+    <circle cx="111" cy="522" r="30" fill="#141417"/>
+    <!-- head -->
+    <circle cx="0" cy="270" r="66" fill="#173F82" stroke="#141417" stroke-width="9"/>
+    <rect x="-46" y="272" width="92" height="30" rx="15" fill="#8CE6FF" opacity="0.9"/>
+    <rect x="-12" y="204" width="24" height="70" rx="12" fill="#2E8CFF"/>
+  </g>
+
+  <!-- ============ SIDE VIEW ============ -->
+  <g transform="translate(560 0)">
+    <text x="0" y="810" fill="#FFC71A" font-size="26" text-anchor="middle">SIDE</text>
+    <!-- skate -->
+    <rect x="-60" y="716" width="120" height="34" rx="14" fill="#141417"/>
+    <rect x="-52" y="748" width="104" height="8" rx="4" fill="#8C949E"/>
+    <!-- leg -->
+    <rect x="-30" y="600" width="60" height="126" rx="24" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="-30" y="648" width="60" height="16" fill="#F7F5EB"/>
+    <!-- pants -->
+    <rect x="-52" y="520" width="116" height="104" rx="34" fill="#141417" stroke="#0D0D0F" stroke-width="6"/>
+    <!-- torso leaning forward -->
+    <path d="M-56 366 Q-58 336 -30 330 L44 336 Q72 344 68 372 L58 540 L-50 540 Z" fill="url(#jb)" stroke="#141417" stroke-width="10"/>
+    <path d="M-56 366 Q-58 336 -30 330 L44 336 Q72 344 68 372 L64 398 Q0 376 -54 394 Z" fill="#173F82"/>
+    <!-- arm forward holding stick -->
+    <rect x="20" y="360" width="46" height="148" rx="23" fill="#1E63C8" stroke="#141417" stroke-width="8" transform="rotate(-18 43 360)"/>
+    <circle cx="92" cy="486" r="30" fill="#141417"/>
+    <!-- stick -->
+    <line x1="92" y1="486" x2="176" y2="726" stroke="#141417" stroke-width="22" stroke-linecap="round"/>
+    <line x1="92" y1="486" x2="176" y2="726" stroke="#C98A3B" stroke-width="12" stroke-linecap="round"/>
+    <path d="M176 726 L252 740 Q262 742 260 730 L256 716 L180 706 Z" fill="#C98A3B" stroke="#141417" stroke-width="8"/>
+    <!-- head -->
+    <circle cx="10" cy="270" r="66" fill="#173F82" stroke="#141417" stroke-width="9"/>
+    <rect x="24" y="272" width="56" height="30" rx="15" fill="#8CE6FF" opacity="0.9"/>
+    <rect x="-30" y="216" width="80" height="22" rx="11" fill="#2E8CFF"/>
+  </g>
+
+  <!-- ============ BACK VIEW ============ -->
+  <g transform="translate(880 0)">
+    <text x="0" y="810" fill="#FFC71A" font-size="26" text-anchor="middle">BACK</text>
+    <!-- skates -->
+    <rect x="-78" y="716" width="64" height="34" rx="14" fill="#141417"/>
+    <rect x="14" y="716" width="64" height="34" rx="14" fill="#141417"/>
+    <rect x="-74" y="748" width="56" height="8" rx="4" fill="#8C949E"/>
+    <rect x="18" y="748" width="56" height="8" rx="4" fill="#8C949E"/>
+    <!-- legs / socks -->
+    <rect x="-62" y="600" width="52" height="126" rx="22" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="10" y="600" width="52" height="126" rx="22" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="-62" y="648" width="52" height="16" fill="#F7F5EB"/>
+    <rect x="10" y="648" width="52" height="16" fill="#F7F5EB"/>
+    <!-- pants -->
+    <rect x="-78" y="520" width="156" height="104" rx="34" fill="#141417" stroke="#0D0D0F" stroke-width="6"/>
+    <!-- torso -->
+    <path d="M-96 360 Q-100 336 -72 330 L72 330 Q100 336 96 360 L82 540 L-82 540 Z" fill="url(#jb)" stroke="#141417" stroke-width="10"/>
+    <path d="M-96 360 Q-100 336 -72 330 L72 330 Q100 336 96 360 L90 396 Q0 372 -90 396 Z" fill="#173F82"/>
+    <!-- number -->
+    <text x="0" y="500" fill="#F7F5EB" font-size="96" text-anchor="middle" stroke="#141417" stroke-width="4">99</text>
+    <!-- arms -->
+    <rect x="-134" y="352" width="46" height="150" rx="23" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <rect x="88" y="352" width="46" height="150" rx="23" fill="#1E63C8" stroke="#141417" stroke-width="8"/>
+    <circle cx="-111" cy="522" r="30" fill="#141417"/>
+    <circle cx="111" cy="522" r="30" fill="#141417"/>
+    <!-- head (back: no visor, stripe runs over) -->
+    <circle cx="0" cy="270" r="66" fill="#173F82" stroke="#141417" stroke-width="9"/>
+    <rect x="-12" y="204" width="24" height="128" rx="12" fill="#2E8CFF"/>
+  </g>
+
+  <!-- ============ TOP VIEW (gameplay sprite) ============ -->
+  <g transform="translate(1160 330) scale(0.62)">
+    <text x="0" y="770" fill="#FFC71A" font-size="42" text-anchor="middle">TOP (GAME SPRITE)</text>
+    <ellipse cx="0" cy="26" rx="158" ry="146" fill="#000000" opacity="0.25"/>
+    <rect x="-70" y="96" width="44" height="72" rx="22" fill="#141417"/>
+    <rect x="26" y="96" width="44" height="72" rx="22" fill="#141417"/>
+    <rect x="-148" y="-64" width="296" height="176" rx="72" fill="url(#jb)" stroke="#141417" stroke-width="11"/>
+    <path d="M-132 -6 Q-132 -56 -76 -58 L76 -58 Q132 -56 132 -6 L132 4 Q66 -20 0 -20 Q-66 -20 -132 4 Z" fill="#173F82"/>
+    <path d="M80 -38 L40 -180" stroke="#141417" stroke-width="30" stroke-linecap="round"/>
+    <path d="M80 -38 L40 -180" stroke="#C98A3B" stroke-width="16" stroke-linecap="round"/>
+    <rect x="-12" y="-204" width="112" height="40" rx="18" fill="#C98A3B" stroke="#141417" stroke-width="10" transform="rotate(-14 40 -184)"/>
+    <rect x="-158" y="-96" width="58" height="96" rx="29" fill="#1E63C8" stroke="#141417" stroke-width="10"/>
+    <circle cx="-128" cy="-96" r="37" fill="#141417"/>
+    <rect x="60" y="-82" width="58" height="88" rx="29" fill="#1E63C8" stroke="#141417" stroke-width="10"/>
+    <circle cx="90" cy="-80" r="37" fill="#141417"/>
+    <circle cx="0" cy="-2" r="82" fill="#173F82" stroke="#141417" stroke-width="11"/>
+    <rect x="-14" y="-80" width="28" height="156" rx="14" fill="#2E8CFF"/>
+    <rect x="-42" y="-80" width="84" height="24" rx="12" fill="#8CE6FF" opacity="0.9"/>
+    <path d="M-32 36 L-32 -6 L-16 10 L0 -18 L16 10 L32 -6 L32 36 Z" fill="#FFC71A" stroke="#141417" stroke-width="7"/>
+  </g>
+
+  <!-- colorway strip -->
+  <g transform="translate(1300 120)">
+    <text x="0" y="0" fill="#F7F5EB" font-size="24">COLORWAYS</text>
+    <rect x="0" y="20" width="150" height="64" rx="10" fill="url(#jb)" stroke="#141417" stroke-width="4"/>
+    <text x="12" y="60" fill="#F7F5EB" font-size="20">HOME</text>
+    <rect x="170" y="20" width="150" height="64" rx="10" fill="url(#jr)" stroke="#141417" stroke-width="4"/>
+    <text x="182" y="60" fill="#F7F5EB" font-size="20">AWAY</text>
+    <text x="0" y="126" fill="#8C949E" font-size="17">PLAYER: GOLD CROWN + GOLD PINSTRIPE</text>
+    <text x="0" y="152" fill="#8C949E" font-size="17">TEAMMATE: BONE ROUNDEL, NO GOLD</text>
+    <text x="0" y="178" fill="#8C949E" font-size="17">AWAY LEADER: STEEL CROWN, SMOKED VISOR</text>
+  </g>
+</svg>

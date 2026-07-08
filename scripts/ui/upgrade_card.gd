@@ -11,6 +11,7 @@ signal card_chosen(index: int, upgrade_id: String)
 @export var card_description: String = "Does cool stuff."
 @export var hotkey_label: String = "1"
 @export var controller_label: String = "A"
+@export var icon_path: String = ""
 
 const HOVER_SCALE: Vector2 = Vector2(1.06, 1.06)
 const REST_SCALE: Vector2 = Vector2(1.0, 1.0)
@@ -24,6 +25,8 @@ var _title_label: Label = null
 var _description_label: Label = null
 var _hotkey_pill: PanelContainer = null
 var _hotkey_label_node: Label = null
+var _icon_glyph: Label = null
+var _icon_rect: TextureRect = null
 var _button: Button = null
 var _hover_tween: Tween = null
 var _is_focused: bool = false
@@ -36,7 +39,7 @@ func _ready() -> void:
 	_build_ui()
 	_refresh_text()
 
-func configure(index: int, id: String, title: String, description: String, hotkey: String = "", controller: String = "") -> void:
+func configure(index: int, id: String, title: String, description: String, hotkey: String = "", controller: String = "", icon: String = "") -> void:
 	card_index = index
 	upgrade_id = id
 	card_title = title
@@ -45,6 +48,7 @@ func configure(index: int, id: String, title: String, description: String, hotke
 		hotkey_label = hotkey
 	if controller != "":
 		controller_label = controller
+	icon_path = icon
 	_refresh_text()
 
 func _build_ui() -> void:
@@ -106,12 +110,19 @@ func _build_ui() -> void:
 	icon_panel.add_theme_stylebox_override("panel", icon_style)
 	vbox.add_child(icon_panel)
 
-	var icon_label: Label = Label.new()
-	icon_label.name = "IconGlyph"
-	icon_label.text = "★"
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon_panel.add_child(icon_label)
+	_icon_rect = TextureRect.new()
+	_icon_rect.name = "IconTexture"
+	_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_icon_rect.visible = false
+	icon_panel.add_child(_icon_rect)
+
+	_icon_glyph = Label.new()
+	_icon_glyph.name = "IconGlyph"
+	_icon_glyph.text = "★"
+	_icon_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_icon_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon_panel.add_child(_icon_glyph)
 
 	_title_label = Label.new()
 	_title_label.name = "Title"
@@ -168,7 +179,7 @@ func _build_ui() -> void:
 		_palette.style_display_label(_title_label, 40, _palette.COLOR_HOT_GOLD)
 		_palette.style_display_label(_description_label, 22, _palette.COLOR_BONE)
 		_palette.style_accent_label(_hotkey_label_node, 26, _palette.COLOR_GOLD)
-		_palette.style_display_label(icon_label, 110, _palette.COLOR_GOLD)
+		_palette.style_display_label(_icon_glyph, 110, _palette.COLOR_GOLD)
 
 func _refresh_text() -> void:
 	if _ribbon_label != null:
@@ -179,6 +190,17 @@ func _refresh_text() -> void:
 		_description_label.text = card_description
 	if _hotkey_label_node != null:
 		_hotkey_label_node.text = "%s / %s" % [hotkey_label, controller_label]
+	_refresh_icon()
+
+func _refresh_icon() -> void:
+	if _icon_rect == null or _icon_glyph == null:
+		return
+	var icon_texture: Texture2D = null
+	if icon_path != "" and ResourceLoader.exists(icon_path):
+		icon_texture = load(icon_path) as Texture2D
+	_icon_rect.texture = icon_texture
+	_icon_rect.visible = icon_texture != null
+	_icon_glyph.visible = icon_texture == null
 
 func grab_card_focus() -> void:
 	if _button != null:

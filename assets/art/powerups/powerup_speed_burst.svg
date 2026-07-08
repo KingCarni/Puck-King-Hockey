@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Speed Burst (movement) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#102647"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- triple chevrons -->
+  <path d="M56 74 L108 128 L56 182 L84 182 L136 128 L84 74 Z" fill="#173F82" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M96 74 L148 128 L96 182 L124 182 L176 128 L124 74 Z" fill="#2E8CFF" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M136 74 L188 128 L136 182 L164 182 L216 128 L164 74 Z" fill="#8CE6FF" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <!-- speed sparks -->
+  <circle cx="52" cy="50" r="6" fill="#8CE6FF" opacity="0.9"/>
+  <circle cx="204" cy="206" r="7" fill="#8CE6FF" opacity="0.9"/>
+  <circle cx="44" cy="210" r="5" fill="#F7F5EB" opacity="0.8"/>
+</svg>

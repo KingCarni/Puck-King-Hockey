@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: resume (play from pause) -->
+  <rect x="22" y="30" width="18" height="68" rx="7" fill="#F7F5EB" stroke="#141417" stroke-width="7"/>
+  <path d="M56 30 Q56 22 64 26 L106 58 Q114 64 106 70 L64 102 Q56 106 56 98 Z"
+        fill="#F7F5EB" stroke="#141417" stroke-width="7" stroke-linejoin="round"/>
+</svg>

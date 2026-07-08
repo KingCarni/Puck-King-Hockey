@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Puck King Hell — AWAY skater (AI leader), top-down, faces image-top -->
+  <defs>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="jersey" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF5C55"/>
+      <stop offset="0.45" stop-color="#FF3338"/>
+      <stop offset="1" stop-color="#C01218"/>
+    </linearGradient>
+    <linearGradient id="helm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D5252B"/>
+      <stop offset="1" stop-color="#7A0D12"/>
+    </linearGradient>
+  </defs>
+
+  <!-- baked ground shadow -->
+  <ellipse cx="256" cy="272" rx="158" ry="146" fill="url(#shadow)"/>
+
+  <!-- skate blades poking out behind -->
+  <rect x="186" y="342" width="44" height="72" rx="22" fill="#141417"/>
+  <rect x="282" y="342" width="44" height="72" rx="22" fill="#141417"/>
+  <rect x="194" y="352" width="28" height="52" rx="14" fill="#8C949E"/>
+  <rect x="290" y="352" width="28" height="52" rx="14" fill="#8C949E"/>
+
+  <!-- body / jersey -->
+  <rect x="108" y="182" width="296" height="176" rx="72" fill="url(#jersey)" stroke="#141417" stroke-width="11"/>
+  <!-- shoulder yoke (black — villain trim) -->
+  <path d="M124 240 Q124 190 180 188 L332 188 Q388 190 388 240 L388 250 Q322 226 256 226 Q190 226 124 250 Z" fill="#1A0A0C"/>
+  <!-- side trim stripes -->
+  <rect x="122" y="216" width="16" height="118" rx="8" fill="#F7F5EB" opacity="0.92"/>
+  <rect x="374" y="216" width="16" height="118" rx="8" fill="#F7F5EB" opacity="0.92"/>
+  <rect x="142" y="216" width="8" height="118" rx="4" fill="#141417" opacity="0.95"/>
+  <rect x="362" y="216" width="8" height="118" rx="4" fill="#141417" opacity="0.95"/>
+  <!-- cel highlight -->
+  <path d="M150 206 Q210 192 300 196 L296 214 Q214 210 158 224 Z" fill="#FFB3AE" opacity="0.45"/>
+
+  <!-- stick: shaft + blade (forward-right) -->
+  <g>
+    <path d="M336 208 L296 66" stroke="#141417" stroke-width="30" stroke-linecap="round"/>
+    <path d="M336 208 L296 66" stroke="#5A5F66" stroke-width="16" stroke-linecap="round"/>
+    <g transform="rotate(-14 296 62)">
+      <rect x="244" y="42" width="112" height="40" rx="18" fill="#5A5F66" stroke="#141417" stroke-width="10"/>
+      <rect x="256" y="50" width="24" height="24" rx="6" fill="#141417"/>
+      <rect x="288" y="50" width="24" height="24" rx="6" fill="#141417"/>
+    </g>
+  </g>
+
+  <!-- arms / gloves -->
+  <rect x="98" y="150" width="58" height="96" rx="29" fill="#C01218" stroke="#141417" stroke-width="10"/>
+  <circle cx="128" cy="150" r="37" fill="#141417"/>
+  <circle cx="128" cy="150" r="26" fill="#2B2B31"/>
+  <rect x="106" y="140" width="44" height="12" rx="6" fill="#8C949E" opacity="0.9"/>
+  <rect x="316" y="164" width="58" height="88" rx="29" fill="#C01218" stroke="#141417" stroke-width="10"/>
+  <circle cx="346" cy="166" r="37" fill="#141417"/>
+  <circle cx="346" cy="166" r="26" fill="#2B2B31"/>
+  <rect x="324" y="156" width="44" height="12" rx="6" fill="#8C949E" opacity="0.9"/>
+
+  <!-- helmet -->
+  <circle cx="256" cy="244" r="82" fill="url(#helm)" stroke="#141417" stroke-width="11"/>
+  <rect x="242" y="166" width="28" height="156" rx="14" fill="#FF3338"/>
+  <!-- visor (faces forward / image-top) — villain gets smoked visor -->
+  <rect x="214" y="166" width="84" height="24" rx="12" fill="#3A0E10" opacity="0.95"/>
+  <!-- steel crown mark (rival king) -->
+  <path d="M224 282 L224 240 L240 256 L256 228 L272 256 L288 240 L288 282 Z" fill="#8C949E" stroke="#141417" stroke-width="7" stroke-linejoin="round"/>
+  <rect x="224" y="274" width="64" height="12" rx="4" fill="#B7BEC7" stroke="#141417" stroke-width="5"/>
+</svg>

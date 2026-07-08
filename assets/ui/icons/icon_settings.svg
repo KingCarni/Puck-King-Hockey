@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: settings gear -->
+  <path d="M64 18 L74 18 L78 32 L92 38 L106 32 L112 42 L102 52 L104 66 L116 74 L112 84 L98 84 L88 96 L90 110 L80 114 L70 102 L58 102 L48 114 L38 110 L40 96 L30 84 L16 84 L12 74 L24 66 L26 52 L16 42 L22 32 L36 38 L50 32 L54 18 Z"
+        fill="#F7F5EB" stroke="#141417" stroke-width="7" stroke-linejoin="round" transform="rotate(8 64 64)"/>
+  <circle cx="64" cy="64" r="20" fill="#141417"/>
+  <circle cx="64" cy="64" r="11" fill="#8C949E"/>
+</svg>

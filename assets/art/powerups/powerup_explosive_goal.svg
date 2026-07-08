@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Explosive Goal (offense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#3A1114"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+    <radialGradient id="boom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFEB4D"/>
+      <stop offset="0.55" stop-color="#FF9A3D"/>
+      <stop offset="1" stop-color="#FF382E"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- goal frame -->
+  <path d="M56 196 L56 96 Q56 84 68 84 L188 84 Q200 84 200 96 L200 196" fill="none" stroke="#D91A21" stroke-width="16" stroke-linecap="round"/>
+  <!-- netting -->
+  <g stroke="#F7F5EB" stroke-width="4" opacity="0.55">
+    <line x1="76" y1="92" x2="76" y2="192"/>
+    <line x1="104" y1="92" x2="104" y2="192"/>
+    <line x1="152" y1="92" x2="152" y2="192"/>
+    <line x1="180" y1="92" x2="180" y2="192"/>
+    <line x1="62" y1="118" x2="194" y2="118"/>
+    <line x1="62" y1="148" x2="194" y2="148"/>
+    <line x1="62" y1="178" x2="194" y2="178"/>
+  </g>
+  <!-- explosion burst -->
+  <path d="M128 74 L142 106 L178 96 L156 126 L190 146 L152 150 L160 188 L128 160 L96 188 L104 150 L66 146 L100 126 L78 96 L114 106 Z"
+        fill="url(#boom)" stroke="#141417" stroke-width="9" stroke-linejoin="round"/>
+  <circle cx="128" cy="138" r="20" fill="#FFEB4D"/>
+  <!-- flying puck bits -->
+  <circle cx="52" cy="70" r="8" fill="#0D0D0F" stroke="#FF9A3D" stroke-width="4"/>
+  <circle cx="206" cy="62" r="6" fill="#0D0D0F" stroke="#FF9A3D" stroke-width="4"/>
+</svg>

@@ -135,7 +135,7 @@ func _rebuild_cards() -> void:
 		card.set_meta("reward_index", index)
 		card.set_meta("upgrade_id", id)
 		_cards_row.add_child(card)
-		card.configure(index, id, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index])
+		card.configure(index, id, String(option.get("title", "UPGRADE")), String(option.get("description", "")), HOTKEYS[index], CONTROLLER_BUTTONS[index], String(option.get("icon", "")))
 		card.card_chosen.connect(_on_card_chosen_from_card)
 		if card.has_signal("focus_entered"):
 			card.focus_entered.connect(_on_card_focus_changed.bind(index))

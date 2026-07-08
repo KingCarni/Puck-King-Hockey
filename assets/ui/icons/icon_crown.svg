@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: crown (rewards / king branding) -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFEB4D"/>
+      <stop offset="1" stop-color="#DAA00C"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 96 L18 44 L44 62 L64 28 L84 62 L110 44 L104 96 Z"
+        fill="url(#gold)" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="22" y="90" width="84" height="16" rx="6" fill="#FFC71A" stroke="#141417" stroke-width="7"/>
+  <circle cx="18" cy="40" r="8" fill="#FFEB4D" stroke="#141417" stroke-width="5"/>
+  <circle cx="64" cy="24" r="8" fill="#FFEB4D" stroke="#141417" stroke-width="5"/>
+  <circle cx="110" cy="40" r="8" fill="#FFEB4D" stroke="#141417" stroke-width="5"/>
+  <circle cx="44" cy="82" r="6" fill="#D91A21" stroke="#141417" stroke-width="4"/>
+  <circle cx="64" cy="80" r="6" fill="#2E8CFF" stroke="#141417" stroke-width="4"/>
+  <circle cx="84" cy="82" r="6" fill="#D91A21" stroke="#141417" stroke-width="4"/>
+</svg>

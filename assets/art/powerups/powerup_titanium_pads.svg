@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Titanium Pads (defense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#2A2E36"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- shoulder pad rig -->
+  <path d="M60 120 Q60 76 104 70 L152 70 Q196 76 196 120 L196 138 Q168 122 128 122 Q88 122 60 138 Z"
+        fill="#8C949E" stroke="#141417" stroke-width="10"/>
+  <path d="M70 116 Q72 88 104 82 L120 82 L120 112 Q94 112 70 124 Z" fill="#B7BEC7"/>
+  <!-- chest plate -->
+  <rect x="92" y="122" width="72" height="74" rx="16" fill="#8C949E" stroke="#141417" stroke-width="10"/>
+  <rect x="102" y="132" width="24" height="54" rx="8" fill="#B7BEC7"/>
+  <!-- rivets -->
+  <circle cx="78" cy="104" r="7" fill="#141417"/>
+  <circle cx="178" cy="104" r="7" fill="#141417"/>
+  <circle cx="128" cy="88" r="7" fill="#141417"/>
+  <!-- impact flash on shoulder -->
+  <path d="M196 84 L214 66 M204 98 L228 90 M188 72 L196 48" stroke="#FFEB4D" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Rocket Shot (offense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#3A1114"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- exhaust -->
+  <path d="M52 196 Q84 176 100 152 L124 176 Q96 196 76 208 Z" fill="#FFC71A" opacity="0.9"/>
+  <path d="M44 214 Q72 200 88 184 L102 198 Q80 212 60 222 Z" fill="#FF382E" opacity="0.85"/>
+  <!-- rocket puck -->
+  <g transform="rotate(-38 138 118)">
+    <rect x="74" y="92" width="118" height="52" rx="26" fill="#F7F5EB" stroke="#141417" stroke-width="10"/>
+    <path d="M192 88 L232 118 L192 148 Z" fill="#D91A21" stroke="#141417" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M78 96 L54 118 L78 140 Z" fill="#FFC71A" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+    <circle cx="150" cy="118" r="15" fill="#2E8CFF" stroke="#141417" stroke-width="7"/>
+    <ellipse cx="120" cy="102" rx="26" ry="7" fill="#FFFFFF" opacity="0.6"/>
+  </g>
+  <!-- speed sparks -->
+  <circle cx="70" cy="160" r="7" fill="#FFEB4D"/>
+  <circle cx="94" cy="212" r="5" fill="#FF382E"/>
+</svg>

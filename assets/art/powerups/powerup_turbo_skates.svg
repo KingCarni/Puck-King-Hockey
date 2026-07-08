@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Turbo Skates (movement) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#102647"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- speed lines -->
+  <g stroke="#8CE6FF" stroke-width="9" stroke-linecap="round" opacity="0.8">
+    <line x1="42" y1="98" x2="86" y2="98"/>
+    <line x1="34" y1="126" x2="78" y2="126"/>
+    <line x1="46" y1="154" x2="82" y2="154"/>
+  </g>
+  <!-- skate boot -->
+  <path d="M100 70 L150 70 L154 118 Q186 122 204 140 Q216 152 212 166 L96 166 Z"
+        fill="#2E8CFF" stroke="#141417" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M108 80 L142 80 L145 116 L108 116 Z" fill="#4DA0FF"/>
+  <!-- laces -->
+  <g stroke="#F7F5EB" stroke-width="7" stroke-linecap="round">
+    <line x1="112" y1="92" x2="140" y2="86"/>
+    <line x1="114" y1="106" x2="142" y2="100"/>
+  </g>
+  <!-- blade holder + blade -->
+  <rect x="98" y="166" width="116" height="16" rx="8" fill="#F7F5EB" stroke="#141417" stroke-width="7"/>
+  <rect x="90" y="188" width="132" height="10" rx="5" fill="#8C949E"/>
+  <!-- turbo bolt -->
+  <path d="M176 56 L138 106 L166 106 L148 146 L198 92 L168 92 Z" fill="#FFEB4D" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <!-- ice spray -->
+  <path d="M84 196 Q70 188 62 196 M222 196 Q232 188 240 196" stroke="#8CE6FF" stroke-width="7" stroke-linecap="round" fill="none"/>
+</svg>

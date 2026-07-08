@@ -1,7 +1,11 @@
 extends "res://scripts/hockey/test_rink.gd"
 
+const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
+
 const ICE_TEXTURE_WEBP_PATH: String = "res://assets/art/rink/pkh_ice_surface.webp"
 const ICE_TEXTURE_PNG_PATH: String = "res://assets/art/rink/pkh_ice_surface.png"
+const GOAL_NET_TEXTURE_PATH: String = "res://assets/art/rink/pkh_goal_net_topdown.svg"
+const BOARD_ADS_TEXTURE_PATH: String = "res://assets/art/rink/pkh_board_ads.svg"
 const ICE_TEXTURE_Y: float = 0.082
 
 const ART_RINK_LENGTH: float = 38.5
@@ -136,6 +140,38 @@ func _create_boards() -> void:
 	_create_arcade_board_run("LeftVisualBoards", false, -ART_RINK_LENGTH * 0.5 - 0.30, false)
 	_create_arcade_board_run("RightVisualBoards", false, ART_RINK_LENGTH * 0.5 + 0.30, true)
 	_create_board_corner_caps()
+	_create_board_ad_strips()
+
+# In-world sponsor ads on the inner board faces the camera can see
+# (far side + both ends; the near side faces away from the camera).
+func _create_board_ad_strips() -> void:
+	if not ResourceLoader.exists(BOARD_ADS_TEXTURE_PATH):
+		return
+	var ads_texture: Texture2D = load(BOARD_ADS_TEXTURE_PATH) as Texture2D
+	if ads_texture == null:
+		return
+	_add_board_ad_quad("TopBoardAds", Vector3(0.0, 0.56, -ART_RINK_WIDTH * 0.5 - 0.17), 0.0, ART_RINK_LENGTH - 1.4, 8.0, ads_texture)
+	_add_board_ad_quad("LeftBoardAds", Vector3(-ART_RINK_LENGTH * 0.5 - 0.17, 0.56, 0.0), 90.0, ART_RINK_WIDTH - 1.4, 4.0, ads_texture)
+	_add_board_ad_quad("RightBoardAds", Vector3(ART_RINK_LENGTH * 0.5 + 0.17, 0.56, 0.0), -90.0, ART_RINK_WIDTH - 1.4, 4.0, ads_texture)
+
+func _add_board_ad_quad(node_name: String, quad_position: Vector3, yaw_degrees: float, length: float, tiles: float, ads_texture: Texture2D) -> void:
+	var quad: QuadMesh = QuadMesh.new()
+	quad.size = Vector2(length, 0.30)
+
+	var mesh_instance: MeshInstance3D = MeshInstance3D.new()
+	mesh_instance.name = node_name
+	mesh_instance.mesh = quad
+	mesh_instance.position = quad_position
+	mesh_instance.rotation_degrees = Vector3(0.0, yaw_degrees, 0.0)
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_texture = ads_texture
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.uv1_scale = Vector3(tiles, 1.0, 1.0)
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	mesh_instance.material_override = material
+	world.add_child(mesh_instance)
 
 func _create_glass_posts() -> void:
 	_create_arcade_glass_run("TopGlass", true, -ART_RINK_WIDTH * 0.5 - 0.42, false)
@@ -144,6 +180,45 @@ func _create_glass_posts() -> void:
 	_create_arcade_glass_run("RightGlass", false, ART_RINK_LENGTH * 0.5 + 0.42, true)
 
 func _create_goals() -> void:
+	if ResourceLoader.exists(GOAL_NET_TEXTURE_PATH):
+		_create_sprite_goals()
+	else:
+		_create_box_goals()
+
+func _create_sprite_goals() -> void:
+	var net_texture: Texture2D = load(GOAL_NET_TEXTURE_PATH) as Texture2D
+	var post_material: StandardMaterial3D = _make_material(Color(0.85, 0.10, 0.13, 1.0), 0.0, 0.30)
+	var mouth_positions: Array[float] = [ART_AWAY_GOAL_X, ART_HOME_GOAL_X]
+
+	for mouth_x: float in mouth_positions:
+		var is_left: bool = mouth_x < 0.0
+		var goal_direction: float = -1.0 if is_left else 1.0
+		var goal: Node3D = Node3D.new()
+		goal.name = "LeftGoal" if is_left else "RightGoal"
+		world.add_child(goal)
+
+		# Top-down net artwork; image-top (the goal mouth) faces center ice.
+		var net: MeshInstance3D = MeshInstance3D.new()
+		net.name = "NetSprite"
+		var plane: PlaneMesh = PlaneMesh.new()
+		plane.size = Vector2(GOAL_WIDTH + 0.70, 1.45)
+		net.mesh = plane
+		net.position = Vector3(mouth_x + goal_direction * 0.62, 0.125, 0.0)
+		net.rotation_degrees = Vector3(0.0, -90.0 if is_left else 90.0, 0.0)
+		net.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		net.material_override = SkaterSpriteVisuals.make_sprite_material(net_texture)
+		goal.add_child(net)
+
+		# 3D posts + crossbar at the mouth for depth pop over the sprite.
+		var top_post: MeshInstance3D = _create_cylinder("TopPost", 0.09, 0.95, Vector3(mouth_x, 0.48, -GOAL_WIDTH * 0.5))
+		var bottom_post: MeshInstance3D = _create_cylinder("BottomPost", 0.09, 0.95, Vector3(mouth_x, 0.48, GOAL_WIDTH * 0.5))
+		var cross_bar: MeshInstance3D = _create_box("CrossBar", Vector3(0.11, 0.11, GOAL_WIDTH + 0.18), Vector3(mouth_x, 0.96, 0.0))
+		var bars: Array[MeshInstance3D] = [top_post, bottom_post, cross_bar]
+		for bar: MeshInstance3D in bars:
+			bar.material_override = post_material
+			goal.add_child(bar)
+
+func _create_box_goals() -> void:
 	var goal_material: StandardMaterial3D = _make_material(Color(0.85, 0.05, 0.05, 1.0), 0.0, 0.3)
 	var net_material: StandardMaterial3D = _make_material(Color(0.86, 0.88, 0.88, 0.65), 0.0, 0.6)
 	var goal_positions: Array[float] = [-ART_RINK_LENGTH * 0.5 + 0.55, ART_RINK_LENGTH * 0.5 - 0.55]

@@ -1,5 +1,7 @@
 extends Node3D
 
+const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
+
 const RINK_HALF_LENGTH: float = 19.25
 const RINK_HALF_WIDTH: float = 9.25
 const PLAYER_Y: float = 0.72
@@ -21,6 +23,7 @@ const PUCK_Y: float = 0.18
 @export var pressure_distance: float = 2.15
 @export var pressure_poke_force: float = 8.5
 @export var stun_seconds: float = 0.65
+@export var skater_texture_path: String = "res://assets/art/characters/pkh_skater_away.svg"
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.LEFT
@@ -225,6 +228,15 @@ func _update_visuals(delta: float) -> void:
 		_body_mesh.material_override = _base_material
 
 func _build_placeholder_visuals() -> void:
+	var skater_texture: Texture2D = SkaterSpriteVisuals.load_texture(skater_texture_path)
+	if skater_texture != null:
+		SkaterSpriteVisuals.apply_skater_sprite(_body_mesh, _direction_marker)
+		_base_material = SkaterSpriteVisuals.make_sprite_material(skater_texture)
+		_stun_material = SkaterSpriteVisuals.make_sprite_material(skater_texture, Color(1.90, 1.55, 0.55, 1.0))
+		_possession_material = SkaterSpriteVisuals.make_sprite_material(skater_texture, Color(1.30, 1.18, 1.12, 1.0))
+		_body_mesh.material_override = _base_material
+		return
+
 	_base_material = StandardMaterial3D.new()
 	_base_material.albedo_color = Color(1.0, 0.18, 0.12, 1.0)
 	_base_material.roughness = 0.35

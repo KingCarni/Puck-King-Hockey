@@ -31,19 +31,22 @@ var _reward_options: Array[Dictionary] = [
 		"id": "rocket_skates",
 		"title": "Rocket Skates",
 		"description": "+Speed, +boost speed, +acceleration.",
-		"glyph": "\u26A1"
+		"glyph": "\u26A1",
+		"icon": "res://assets/art/powerups/powerup_turbo_skates.svg"
 	},
 	{
 		"id": "sticky_tape",
 		"title": "Sticky Tape",
 		"description": "+Puck pickup radius and smoother puck control.",
-		"glyph": "\u269B"
+		"glyph": "\u269B",
+		"icon": "res://assets/art/powerups/powerup_sticky_tape.svg"
 	},
 	{
 		"id": "titanium_pads",
 		"title": "Titanium Pads",
 		"description": "+Checking power, +hit range, +puck pop force.",
-		"glyph": "\u2694"
+		"glyph": "\u2694",
+		"icon": "res://assets/art/powerups/powerup_titanium_pads.svg"
 	}
 ]
 

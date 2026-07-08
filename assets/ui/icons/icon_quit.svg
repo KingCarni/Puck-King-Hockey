@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: quit / exit door -->
+  <path d="M26 22 L74 22 Q80 22 80 28 L80 40 L68 40 L68 34 L38 34 L38 94 L68 94 L68 88 L80 88 L80 100 Q80 106 74 106 L26 106 Q20 106 20 100 L20 28 Q20 22 26 22 Z"
+        fill="#F7F5EB" stroke="#141417" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M60 64 L96 64 M96 64 L82 50 M96 64 L82 78" fill="none" stroke="#141417" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M60 64 L96 64 M96 64 L82 50 M96 64 L82 78" fill="none" stroke="#FF382E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

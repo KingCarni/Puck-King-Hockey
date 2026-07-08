@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Ricochet Shot (offense) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#33200F"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- walls -->
+  <rect x="34" y="42" width="12" height="172" rx="6" fill="#8C949E"/>
+  <rect x="210" y="42" width="12" height="172" rx="6" fill="#8C949E"/>
+  <!-- bounce path -->
+  <path d="M46 66 L210 108 L46 150 L200 196" fill="none" stroke="#FF9A3D" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- impact stars at walls -->
+  <path d="M210 108 L222 94 M210 108 L226 108 M210 108 L222 122" stroke="#FFEB4D" stroke-width="7" stroke-linecap="round"/>
+  <path d="M46 150 L34 136 M46 150 L30 150 M46 150 L34 164" stroke="#FFEB4D" stroke-width="7" stroke-linecap="round"/>
+  <!-- puck at end of path -->
+  <ellipse cx="196" cy="204" rx="30" ry="13" fill="#0D0D0F"/>
+  <ellipse cx="196" cy="196" rx="30" ry="13" fill="#2B2B31" stroke="#141417" stroke-width="6"/>
+  <ellipse cx="188" cy="192" rx="10" ry="4" fill="#8C949E" opacity="0.8"/>
+</svg>

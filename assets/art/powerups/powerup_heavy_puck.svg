@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Heavy Puck (defense/chaos) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#2A2E36"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- cracked ice under puck -->
+  <g stroke="#8CE6FF" stroke-width="6" stroke-linecap="round" opacity="0.85">
+    <line x1="128" y1="188" x2="70" y2="212"/>
+    <line x1="128" y1="188" x2="186" y2="214"/>
+    <line x1="128" y1="188" x2="52" y2="176"/>
+    <line x1="128" y1="188" x2="204" y2="176"/>
+    <line x1="96" y1="198" x2="84" y2="222"/>
+    <line x1="162" y1="200" x2="176" y2="224"/>
+  </g>
+  <!-- mega puck -->
+  <ellipse cx="128" cy="172" rx="66" ry="28" fill="#0D0D0F"/>
+  <rect x="62" y="128" width="132" height="46" fill="#1B1B20" stroke="#141417" stroke-width="8"/>
+  <ellipse cx="128" cy="128" rx="66" ry="28" fill="#2B2B31" stroke="#141417" stroke-width="8"/>
+  <!-- weight mark -->
+  <path d="M108 92 L148 92 L158 72 L98 72 Z" fill="#8C949E" stroke="#141417" stroke-width="7" stroke-linejoin="round"/>
+  <rect x="118" y="56" width="20" height="18" rx="6" fill="#8C949E" stroke="#141417" stroke-width="6"/>
+  <!-- steel glint -->
+  <ellipse cx="104" cy="120" rx="22" ry="8" fill="#8C949E" opacity="0.75"/>
+</svg>

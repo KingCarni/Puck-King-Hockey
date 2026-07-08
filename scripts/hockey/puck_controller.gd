@@ -1,5 +1,8 @@
 extends Node3D
 
+const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
+
+const PUCK_TEXTURE_PATH: String = "res://assets/art/puck/pkh_puck_topdown.svg"
 const RINK_HALF_LENGTH: float = 19.25
 const RINK_HALF_WIDTH: float = 9.25
 const PUCK_Y: float = 0.18
@@ -104,6 +107,16 @@ func _flat_position(position: Vector3) -> Vector3:
 	return Vector3(position.x, 0.0, position.z)
 
 func _build_placeholder_visuals() -> void:
+	var puck_texture: Texture2D = SkaterSpriteVisuals.load_texture(PUCK_TEXTURE_PATH)
+	if puck_texture != null:
+		var plane: PlaneMesh = PlaneMesh.new()
+		plane.size = Vector2(0.85, 0.85)
+		_puck_mesh.mesh = plane
+		_puck_mesh.position = Vector3(0.0, 0.03, 0.0)
+		_puck_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_puck_mesh.material_override = SkaterSpriteVisuals.make_sprite_material(puck_texture)
+		return
+
 	var puck_material: StandardMaterial3D = StandardMaterial3D.new()
 	puck_material.albedo_color = Color(0.015, 0.015, 0.018, 1.0)
 	puck_material.roughness = 0.28

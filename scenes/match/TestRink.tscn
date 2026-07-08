@@ -76,6 +76,7 @@ mesh = SubResource("BoxMesh_direction_marker")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.2, 0.72, -3.7)
 script = ExtResource("4_ai_opponent")
 player_path = NodePath("../Player")
+skater_texture_path = "res://assets/art/characters/pkh_skater_away_alt.svg"
 acceleration = 13.2
 max_speed = 6.0
 shooting_x_threshold = -10.2

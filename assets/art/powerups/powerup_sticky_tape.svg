@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Power-up: Sticky Tape (utility) -->
+  <defs>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#332A10"/>
+      <stop offset="1" stop-color="#141417"/>
+    </radialGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="36" fill="url(#vig)" stroke="#FFC71A" stroke-width="12"/>
+  <rect x="26" y="26" width="204" height="204" rx="24" fill="none" stroke="#0D0D0F" stroke-width="6"/>
+
+  <!-- unrolled tape strip -->
+  <path d="M60 196 L196 196 L196 168 L60 168 Z" fill="#F7F5EB" stroke="#141417" stroke-width="9"/>
+  <path d="M60 196 L44 210 L44 182 L60 168 Z" fill="#D9D5C4" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <!-- tape roll -->
+  <circle cx="150" cy="112" r="58" fill="#F7F5EB" stroke="#141417" stroke-width="10"/>
+  <circle cx="150" cy="112" r="26" fill="#141417"/>
+  <circle cx="150" cy="112" r="14" fill="#0D0D0F"/>
+  <path d="M96 130 A58 58 0 0 1 106 70" fill="none" stroke="#D9D5C4" stroke-width="10"/>
+  <!-- sticky drips -->
+  <path d="M88 168 Q84 156 92 150 M120 168 Q118 154 128 150" stroke="#FFC71A" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <circle cx="92" cy="146" r="6" fill="#FFC71A"/>
+  <circle cx="128" cy="146" r="6" fill="#FFC71A"/>
+</svg>

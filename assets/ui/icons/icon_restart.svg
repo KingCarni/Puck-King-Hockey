@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: restart / rematch -->
+  <path d="M100 64 A36 36 0 1 1 64 28" fill="none" stroke="#141417" stroke-width="22" stroke-linecap="round"/>
+  <path d="M100 64 A36 36 0 1 1 64 28" fill="none" stroke="#F7F5EB" stroke-width="12" stroke-linecap="round"/>
+  <path d="M64 10 L94 28 L64 46 Z" fill="#F7F5EB" stroke="#141417" stroke-width="7" stroke-linejoin="round"/>
+</svg>

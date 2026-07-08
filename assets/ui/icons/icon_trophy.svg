@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- UI icon: trophy -->
+  <defs>
+    <linearGradient id="cup" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFEB4D"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <!-- handles -->
+  <path d="M34 34 L18 34 Q12 52 26 62 L38 68 M94 34 L110 34 Q116 52 102 62 L90 68"
+        fill="none" stroke="#141417" stroke-width="14" stroke-linecap="round"/>
+  <path d="M34 34 L18 34 Q12 52 26 62 L38 68 M94 34 L110 34 Q116 52 102 62 L90 68"
+        fill="none" stroke="#FFC71A" stroke-width="7" stroke-linecap="round"/>
+  <!-- cup -->
+  <path d="M34 22 L94 22 L90 62 Q86 82 64 82 Q42 82 38 62 Z" fill="url(#cup)" stroke="#141417" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M44 30 L54 30 L52 62 Q50 72 58 76 Q44 72 42 58 Z" fill="#FFF6B8" opacity="0.8"/>
+  <!-- stem + base -->
+  <rect x="56" y="82" width="16" height="12" fill="#B8860B" stroke="#141417" stroke-width="6"/>
+  <rect x="40" y="94" width="48" height="14" rx="5" fill="#FFC71A" stroke="#141417" stroke-width="7"/>
+  <!-- star -->
+  <path d="M64 36 L69 48 L82 48 L72 56 L75 68 L64 61 L53 68 L56 56 L46 48 L59 48 Z" fill="#D91A21" stroke="#141417" stroke-width="4"/>
+</svg>
