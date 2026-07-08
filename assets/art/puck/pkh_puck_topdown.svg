@@ -1,29 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- Puck King Hell — puck, top-down, with baked readability halo -->
+  <!-- Puck King Hell — puck, top-down, high-readability pass -->
   <defs>
     <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0.50" stop-color="#8CE6FF" stop-opacity="0.55"/>
-      <stop offset="0.72" stop-color="#8CE6FF" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#8CE6FF" stop-opacity="0"/>
+      <stop offset="0.42" stop-color="#9BEFFF" stop-opacity="0.62"/>
+      <stop offset="0.70" stop-color="#62DFFF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#62DFFF" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="top" cx="0.38" cy="0.34" r="0.75">
-      <stop offset="0" stop-color="#3A3A42"/>
-      <stop offset="0.55" stop-color="#1B1B20"/>
-      <stop offset="1" stop-color="#0D0D0F"/>
+    <radialGradient id="shadow" cx="0.5" cy="0.58" r="0.52">
+      <stop offset="0.20" stop-color="#000000" stop-opacity="0.50"/>
+      <stop offset="0.78" stop-color="#000000" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="top" cx="0.34" cy="0.28" r="0.82">
+      <stop offset="0" stop-color="#303038"/>
+      <stop offset="0.48" stop-color="#101014"/>
+      <stop offset="1" stop-color="#020204"/>
     </radialGradient>
   </defs>
 
-  <!-- glow halo: the puck must never be lost -->
-  <circle cx="128" cy="128" r="122" fill="url(#halo)"/>
-  <circle cx="128" cy="128" r="86" fill="none" stroke="#8CE6FF" stroke-width="6" opacity="0.5"/>
+  <!-- tiny baked shadow so the puck separates from bright ice -->
+  <ellipse cx="128" cy="139" rx="83" ry="72" fill="url(#shadow)"/>
 
-  <!-- rubber body -->
-  <circle cx="128" cy="128" r="72" fill="#0D0D0F"/>
-  <circle cx="128" cy="128" r="64" fill="url(#top)" stroke="#141417" stroke-width="6"/>
+  <!-- subtle glow halo: the puck must never be lost -->
+  <circle cx="128" cy="128" r="122" fill="url(#halo)"/>
+  <circle cx="128" cy="128" r="92" fill="none" stroke="#9BEFFF" stroke-width="8" opacity="0.58"/>
+
+  <!-- rubber body with thicker silhouette -->
+  <circle cx="128" cy="128" r="78" fill="#000000" opacity="0.95"/>
+  <circle cx="128" cy="128" r="69" fill="url(#top)" stroke="#000000" stroke-width="10"/>
+  <circle cx="128" cy="128" r="52" fill="none" stroke="#32323A" stroke-width="5" opacity="0.85"/>
+
   <!-- steel rim highlight -->
-  <path d="M74 106 A60 60 0 0 1 118 68" fill="none" stroke="#8C949E" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+  <path d="M72 105 A63 63 0 0 1 119 64" fill="none" stroke="#A8B2BF" stroke-width="8" stroke-linecap="round" opacity="0.95"/>
   <!-- top sheen -->
-  <ellipse cx="106" cy="104" rx="26" ry="16" fill="#F7F5EB" opacity="0.14" transform="rotate(-24 106 104)"/>
-  <!-- crown stamp -->
-  <path d="M108 148 L108 122 L118 132 L128 114 L138 132 L148 122 L148 148 Z" fill="#FFC71A" opacity="0.85" stroke="#0D0D0F" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="106" cy="101" rx="25" ry="14" fill="#F7F5EB" opacity="0.16" transform="rotate(-24 106 101)"/>
+  <!-- crown stamp, smaller so the black puck stays dominant -->
+  <path d="M109 149 L109 125 L119 134 L128 117 L137 134 L147 125 L147 149 Z" fill="#FFC71A" opacity="0.82" stroke="#050506" stroke-width="5" stroke-linejoin="round"/>
 </svg>
