@@ -1,20 +1,26 @@
 extends CanvasLayer
 
-# Pause menu: Resume, Restart Match, Quit To Menu.
+# Pause menu: Resume, player control selection, Restart Match, Quit To Menu.
 # Triggered by ESC or controller Start. Always processes (works during pause).
 
 signal resume_requested
 signal restart_requested
 signal quit_requested
+signal control_home_requested
+signal control_away_requested
 
 var _palette: Node = null
 var _root: Control = null
 var _shade: ColorRect = null
 var _frame: PanelContainer = null
 var _resume_button: Button = null
+var _control_home_button: Button = null
+var _control_away_button: Button = null
 var _restart_button: Button = null
 var _quit_button: Button = null
+var _control_label: Label = null
 var _is_open: bool = false
+var _current_control_side: String = "HOME"
 
 func _ready() -> void:
 	layer = 60
@@ -43,10 +49,10 @@ func _build_ui() -> void:
 	_frame.anchor_top = 0.5
 	_frame.anchor_right = 0.5
 	_frame.anchor_bottom = 0.5
-	_frame.offset_left = -380.0
-	_frame.offset_right = 380.0
-	_frame.offset_top = -340.0
-	_frame.offset_bottom = 340.0
+	_frame.offset_left = -410.0
+	_frame.offset_right = 410.0
+	_frame.offset_top = -390.0
+	_frame.offset_bottom = 390.0
 	_root.add_child(_frame)
 
 	var frame_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -58,17 +64,16 @@ func _build_ui() -> void:
 	frame_style.shadow_size = 22
 	frame_style.content_margin_left = 40
 	frame_style.content_margin_right = 40
-	frame_style.content_margin_top = 36
-	frame_style.content_margin_bottom = 36
+	frame_style.content_margin_top = 34
+	frame_style.content_margin_bottom = 34
 	_frame.add_theme_stylebox_override("panel", frame_style)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.name = "Layout"
-	vbox.add_theme_constant_override("separation", 22)
+	vbox.add_theme_constant_override("separation", 18)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_frame.add_child(vbox)
 
-	# Header ribbon.
 	var header_panel: PanelContainer = PanelContainer.new()
 	header_panel.name = "HeaderRibbon"
 	var header_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -95,49 +100,63 @@ func _build_ui() -> void:
 	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(subtitle_label)
 
-	var spacer: Control = Control.new()
-	spacer.custom_minimum_size = Vector2(0.0, 12.0)
-	vbox.add_child(spacer)
+	_control_label = Label.new()
+	_control_label.name = "ControlLabel"
+	_control_label.text = "YOU CONTROL: HOME"
+	_control_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_control_label)
 
 	_resume_button = _make_button("RESUME", Color(0.85, 0.10, 0.13, 1.0))
+	_control_home_button = _make_button("CONTROL HOME / BLUE", Color(0.10, 0.18, 0.34, 1.0))
+	_control_away_button = _make_button("CONTROL AWAY / RED", Color(0.32, 0.08, 0.08, 1.0))
 	_restart_button = _make_button("RESTART MATCH", Color(0.10, 0.10, 0.12, 1.0))
 	_quit_button = _make_button("QUIT TO MENU", Color(0.10, 0.10, 0.12, 1.0))
 
 	vbox.add_child(_resume_button)
+	vbox.add_child(_control_home_button)
+	vbox.add_child(_control_away_button)
 	vbox.add_child(_restart_button)
 	vbox.add_child(_quit_button)
 
 	_resume_button.pressed.connect(_on_resume_pressed)
+	_control_home_button.pressed.connect(_on_control_home_pressed)
+	_control_away_button.pressed.connect(_on_control_away_pressed)
 	_restart_button.pressed.connect(_on_restart_pressed)
 	_quit_button.pressed.connect(_on_quit_pressed)
 
 	var hint_label: Label = Label.new()
 	hint_label.name = "Hint"
-	hint_label.text = "ESC OR START TO RESUME"
+	hint_label.text = "SELECT TEAM CONTROL, THEN RESUME"
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint_label)
 
 	if _palette != null:
 		_palette.style_display_label(title_label, 64, _palette.COLOR_BONE)
 		_palette.style_accent_label(subtitle_label, 22, _palette.COLOR_GOLD)
+		_palette.style_accent_label(_control_label, 22, _palette.COLOR_BONE)
 		_palette.style_accent_label(hint_label, 18, _palette.COLOR_STEEL)
 
 func _make_button(text: String, fill: Color) -> Button:
 	var button: Button = Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(420.0, 70.0)
+	button.custom_minimum_size = Vector2(460.0, 64.0)
 	button.focus_mode = Control.FOCUS_ALL
 	if _palette != null:
-		_palette.style_button(button, fill, _palette.COLOR_GOLD, _palette.COLOR_BONE, 30)
+		_palette.style_button(button, fill, _palette.COLOR_GOLD, _palette.COLOR_BONE, 28)
 	return button
+
+func set_control_side(side: String) -> void:
+	_current_control_side = side
+	_update_control_label()
 
 func open() -> void:
 	_is_open = true
 	visible = true
 	get_tree().paused = true
+	_update_control_label()
 	_root.modulate.a = 0.0
 	_frame.scale = Vector2(0.85, 0.85)
-	_frame.pivot_offset = Vector2(380.0, 340.0)
+	_frame.pivot_offset = Vector2(410.0, 390.0)
 
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
@@ -164,9 +183,21 @@ func _focus_resume() -> void:
 	if _resume_button != null:
 		_resume_button.grab_focus()
 
+func _update_control_label() -> void:
+	if _control_label != null:
+		_control_label.text = "YOU CONTROL: %s" % _current_control_side
+
 func _on_resume_pressed() -> void:
 	close()
 	emit_signal("resume_requested")
+
+func _on_control_home_pressed() -> void:
+	set_control_side("HOME")
+	emit_signal("control_home_requested")
+
+func _on_control_away_pressed() -> void:
+	set_control_side("AWAY")
+	emit_signal("control_away_requested")
 
 func _on_restart_pressed() -> void:
 	close()
