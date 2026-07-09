@@ -47,10 +47,10 @@ func _build_ui() -> void:
 	_frame.anchor_top = 0.5
 	_frame.anchor_right = 0.5
 	_frame.anchor_bottom = 0.5
-	_frame.offset_left = -880.0
-	_frame.offset_right = 880.0
-	_frame.offset_top = -440.0
-	_frame.offset_bottom = 440.0
+	_frame.offset_left = -660.0
+	_frame.offset_right = 660.0
+	_frame.offset_top = -370.0
+	_frame.offset_bottom = 370.0
 	_frame.mouse_filter = Control.MOUSE_FILTER_PASS
 	_root.add_child(_frame)
 
@@ -61,15 +61,16 @@ func _build_ui() -> void:
 	frame_style.set_corner_radius_all(18)
 	frame_style.shadow_color = Color(0.0, 0.0, 0.0, 0.7)
 	frame_style.shadow_size = 22
-	frame_style.content_margin_left = 40
-	frame_style.content_margin_right = 40
-	frame_style.content_margin_top = 32
-	frame_style.content_margin_bottom = 32
+	frame_style.content_margin_left = 30
+	frame_style.content_margin_right = 30
+	frame_style.content_margin_top = 26
+	frame_style.content_margin_bottom = 26
 	_frame.add_theme_stylebox_override("panel", frame_style)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.name = "Layout"
-	vbox.add_theme_constant_override("separation", 18)
+	vbox.add_theme_constant_override("separation", 14)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_frame.add_child(vbox)
 
 	var header_panel: PanelContainer = PanelContainer.new()
@@ -81,8 +82,8 @@ func _build_ui() -> void:
 	header_style.set_corner_radius_all(8)
 	header_style.content_margin_left = 28
 	header_style.content_margin_right = 28
-	header_style.content_margin_top = 12
-	header_style.content_margin_bottom = 12
+	header_style.content_margin_top = 10
+	header_style.content_margin_bottom = 10
 	header_panel.add_theme_stylebox_override("panel", header_style)
 	vbox.add_child(header_panel)
 
@@ -101,7 +102,8 @@ func _build_ui() -> void:
 	_cards_row = HBoxContainer.new()
 	_cards_row.name = "CardsRow"
 	_cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_cards_row.add_theme_constant_override("separation", 36)
+	_cards_row.add_theme_constant_override("separation", 24)
+	_cards_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_cards_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_cards_row)
 
@@ -112,9 +114,9 @@ func _build_ui() -> void:
 	vbox.add_child(_hint_label)
 
 	if _palette != null:
-		_palette.style_display_label(_title_label, 56, _palette.COLOR_BONE)
-		_palette.style_accent_label(_subtitle_label, 28, _palette.COLOR_GOLD)
-		_palette.style_accent_label(_hint_label, 22, _palette.COLOR_STEEL)
+		_palette.style_display_label(_title_label, 50, _palette.COLOR_BONE)
+		_palette.style_accent_label(_subtitle_label, 24, _palette.COLOR_GOLD)
+		_palette.style_accent_label(_hint_label, 18, _palette.COLOR_STEEL)
 
 func set_options(options: Array) -> void:
 	_options.clear()
@@ -127,7 +129,6 @@ func _rebuild_cards() -> void:
 	for card in _cards:
 		card.queue_free()
 	_cards.clear()
-
 	for index in range(_options.size()):
 		var option: Dictionary = _options[index]
 		var id: String = String(option.get("id", ""))
@@ -147,12 +148,12 @@ func show_draft() -> void:
 	visible = true
 	_focused_index = 0
 	_root.modulate.a = 0.0
-	_frame.scale = Vector2(0.86, 0.86)
-	_frame.pivot_offset = Vector2(880.0, 440.0)
+	_frame.scale = Vector2(0.90, 0.90)
+	_frame.pivot_offset = Vector2(660.0, 370.0)
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(_root, "modulate:a", 1.0, 0.18)
-	tween.tween_property(_frame, "scale", Vector2(1.0, 1.0), 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_frame, "scale", Vector2(1.0, 1.0), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.set_parallel(false)
 	tween.tween_callback(Callable(self, "_focus_first_card"))
 
