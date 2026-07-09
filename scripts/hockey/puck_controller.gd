@@ -28,6 +28,7 @@ var _velocity: Vector3 = Vector3.ZERO
 var _owner: Node3D = null
 var _is_possessed: bool = false
 var _last_toucher: Node3D = null
+var _previous_position: Vector3 = Vector3.ZERO
 var _sprite_material: StandardMaterial3D = null
 var _is_hot: bool = false
 
@@ -36,12 +37,14 @@ var _is_hot: bool = false
 func _ready() -> void:
 	_build_placeholder_visuals()
 	global_position.y = PUCK_Y
+	_previous_position = global_position
 
 func _physics_process(delta: float) -> void:
 	_update_hot_glow()
 	if _is_possessed:
 		return
 
+	_previous_position = global_position
 	_apply_magnet(delta)
 	global_position += _velocity * delta
 	global_position.y = PUCK_Y
@@ -74,6 +77,15 @@ func _update_hot_glow() -> void:
 func get_last_toucher() -> Node3D:
 	return _last_toucher if _last_toucher != null and is_instance_valid(_last_toucher) else null
 
+func get_previous_position() -> Vector3:
+	return _previous_position
+
+func get_velocity() -> Vector3:
+	return _velocity
+
+func is_possessed() -> bool:
+	return _is_possessed
+
 func can_be_picked_up_by(player: Node3D) -> bool:
 	if _is_possessed:
 		return false
@@ -94,6 +106,7 @@ func update_possession(target_position: Vector3, owner_velocity: Vector3, delta:
 	if not _is_possessed:
 		return
 
+	_previous_position = global_position
 	var target: Vector3 = target_position
 	target.y = PUCK_Y
 	var lerp_weight: float = clamp(carry_lag_speed * delta, 0.0, 1.0)
@@ -113,6 +126,7 @@ func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0,
 	var shot_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power) * maxf(speed_scale, 0.1)
 	var owner_influence: Vector3 = Vector3(owner_velocity.x, 0.0, owner_velocity.z) * owner_velocity_inheritance
 
+	_previous_position = global_position
 	_is_possessed = false
 	_owner = null
 	_velocity = normalized_direction * shot_speed + owner_influence
@@ -125,6 +139,7 @@ func poke_free(direction: Vector3, force: float) -> void:
 	if release_direction.length_squared() <= 0.001:
 		release_direction = Vector3.FORWARD
 
+	_previous_position = global_position
 	_is_possessed = false
 	_owner = null
 	_velocity = release_direction.normalized() * force
