@@ -3,8 +3,8 @@ extends Node3D
 const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
 
 const PUCK_TEXTURE_PATH: String = "res://assets/art/puck/pkh_puck_topdown.svg"
-const RINK_HALF_LENGTH: float = 22.0
-const RINK_HALF_WIDTH: float = 10.8
+const RINK_HALF_LENGTH: float = 24.2
+const RINK_HALF_WIDTH: float = 11.6
 const PUCK_Y: float = 0.18
 
 @export var pickup_radius: float = 1.05
@@ -17,7 +17,7 @@ const PUCK_Y: float = 0.18
 @export var slap_shot_speed: float = 27.0
 @export var owner_velocity_inheritance: float = 0.28
 @export var max_loose_speed: float = 36.0
-@export var hot_shot_speed_threshold: float = 20.0
+@export var rocket_hot_seconds: float = 0.72
 
 var magnet_target: Node3D = null
 var magnet_radius: float = 2.8
@@ -32,6 +32,7 @@ var _sprite_material: StandardMaterial3D = null
 var _hot_glow: MeshInstance3D = null
 var _hot_core: OmniLight3D = null
 var _is_hot: bool = false
+var _rocket_hot_timer: float = 0.0
 
 @onready var _puck_mesh: MeshInstance3D = $PuckMesh
 
@@ -42,6 +43,7 @@ func _ready() -> void:
 	_previous_position = global_position
 
 func _physics_process(delta: float) -> void:
+	_rocket_hot_timer = maxf(_rocket_hot_timer - delta, 0.0)
 	_update_hot_glow()
 	if _is_possessed:
 		return
@@ -68,7 +70,7 @@ func _apply_magnet(delta: float) -> void:
 func _update_hot_glow() -> void:
 	if _sprite_material == null:
 		return
-	var hot: bool = not _is_possessed and _velocity.length() > hot_shot_speed_threshold
+	var hot: bool = not _is_possessed and _rocket_hot_timer > 0.0 and _velocity.length() > 6.0
 	if hot == _is_hot:
 		return
 	_is_hot = hot
@@ -108,6 +110,7 @@ func take_possession(owner: Node3D) -> void:
 	_last_toucher = owner
 	_is_possessed = true
 	_velocity = Vector3.ZERO
+	_rocket_hot_timer = 0.0
 
 func is_possessed_by(owner: Node3D) -> bool:
 	return _is_possessed and _owner == owner
@@ -138,6 +141,7 @@ func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0,
 	_owner = null
 	_velocity = normalized_direction * shot_speed + owner_influence
 	_velocity = _velocity.limit_length(max_loose_speed)
+	_rocket_hot_timer = rocket_hot_seconds if speed_scale > 1.05 else 0.0
 	global_position += normalized_direction * 0.52
 	global_position.y = PUCK_Y
 
@@ -150,6 +154,7 @@ func poke_free(direction: Vector3, force: float) -> void:
 	_owner = null
 	_velocity = release_direction.normalized() * force
 	_velocity = _velocity.limit_length(max_loose_speed)
+	_rocket_hot_timer = 0.0
 
 func _apply_rink_bounds() -> void:
 	var clamped_x: float = clamp(global_position.x, -RINK_HALF_LENGTH, RINK_HALF_LENGTH)
