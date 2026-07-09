@@ -10,15 +10,17 @@ const PLAYER_Y: float = 0.72
 @export var puck_path: NodePath = NodePath("../Puck")
 ## -1.0 guards the left (-X) goal, +1.0 guards the right (+X) goal.
 @export var guard_side: float = -1.0
-@export var guard_distance_from_center: float = 17.35
-@export var crease_half_width: float = 2.05
-@export var crease_depth: float = 0.85
-@export var lateral_max_speed: float = 6.4
-@export var lateral_acceleration: float = 26.0
+@export var guard_distance_from_center: float = 20.0
+@export var crease_half_width: float = 2.30
+@export var crease_depth: float = 0.95
+@export var lateral_max_speed: float = 6.8
+@export var lateral_acceleration: float = 28.0
 @export var friction: float = 9.0
-@export var block_radius: float = 1.15
-@export var save_deflect_speed: float = 9.5
-@export var save_cooldown_seconds: float = 0.45
+@export var block_radius: float = 1.28
+@export var crash_poke_radius: float = 1.65
+@export var save_deflect_speed: float = 10.8
+@export var crash_clear_speed: float = 14.0
+@export var save_cooldown_seconds: float = 0.36
 @export var save_flash_seconds: float = 0.30
 @export var goalie_texture_path: String = "res://assets/art/characters/pkh_goalie_home.svg"
 
@@ -64,7 +66,6 @@ func _update_positioning(delta: float) -> void:
 		_lateral_velocity = move_toward(_lateral_velocity, 0.0, friction * delta)
 
 	global_position.z = clampf(global_position.z + _lateral_velocity * delta, -crease_half_width, crease_half_width)
-	# Hug the crease line; a save can nudge the goalie, ease back in.
 	global_position.x = lerpf(global_position.x, _guard_x(), clampf(6.0 * delta, 0.0, 1.0))
 	global_position.x = clampf(global_position.x, _guard_x() - crease_depth, _guard_x() + crease_depth)
 	global_position.y = PLAYER_Y
@@ -82,14 +83,12 @@ func _pick_target_z() -> float:
 	if raw_velocity is Vector3:
 		puck_velocity = raw_velocity
 
-	# Shot incoming: slide to where the puck will cross the goal line.
 	var toward_goal: bool = puck_velocity.x * guard_side > 2.0
 	if toward_goal and absf(puck_velocity.x) > 0.5:
 		var time_to_line: float = (_guard_x() - puck_position.x) / puck_velocity.x
 		if time_to_line > 0.0 and time_to_line < 1.4:
 			return clampf(puck_position.z + puck_velocity.z * time_to_line, -crease_half_width, crease_half_width)
 
-	# Otherwise mirror the puck with a small anticipation lead.
 	return clampf(puck_position.z + puck_velocity.z * 0.10, -crease_half_width, crease_half_width)
 
 func _update_block() -> void:
@@ -101,17 +100,23 @@ func _update_block() -> void:
 
 	var flat_delta: Vector3 = puck_node.global_position - global_position
 	flat_delta.y = 0.0
-	if flat_delta.length() > block_radius:
+	var distance: float = flat_delta.length()
+	if distance > crash_poke_radius:
 		return
 
-	# Kick the puck away from the net toward the near corner.
-	var clear_direction: Vector3 = Vector3(-guard_side, 0.0, signf(global_position.z) if absf(global_position.z) > 0.15 else (1.0 if randf() > 0.5 else -1.0))
+	var clear_speed: float = save_deflect_speed if distance > block_radius else crash_clear_speed
+	var clear_direction: Vector3 = _get_clear_direction(puck_node.global_position)
 	if _puck.has_method("poke_free"):
-		_puck.call("poke_free", clear_direction.normalized(), save_deflect_speed)
+		_puck.call("poke_free", clear_direction, clear_speed)
 	_save_cooldown_timer = save_cooldown_seconds
 	_save_flash_timer = save_flash_seconds
-	# Saves push the goalie back slightly for weight.
-	global_position.x += guard_side * 0.18
+	global_position.x += guard_side * 0.12
+
+func _get_clear_direction(puck_position: Vector3) -> Vector3:
+	# Always clear away from the net mouth and toward a corner. This prevents
+	# players from shoving the goalie/puck straight through the goal line.
+	var corner_z: float = signf(puck_position.z) if absf(puck_position.z) > 0.18 else (1.0 if randf() > 0.5 else -1.0)
+	return Vector3(-guard_side * 1.35, 0.0, corner_z * 0.80).normalized()
 
 func _update_visuals(delta: float) -> void:
 	if _visual_root == null:
@@ -123,7 +128,6 @@ func _update_visuals(delta: float) -> void:
 			var to_puck: Vector3 = puck_node.global_position - global_position
 			to_puck.y = 0.0
 			if to_puck.length_squared() > 0.04:
-				# Face the puck, but never turn away from center ice.
 				facing = to_puck.normalized().lerp(Vector3(-guard_side, 0.0, 0.0), 0.45).normalized()
 	var target_yaw: float = atan2(facing.x, facing.z)
 	_visual_root.rotation.y = lerp_angle(_visual_root.rotation.y, target_yaw, clampf(7.0 * delta, 0.0, 1.0))
