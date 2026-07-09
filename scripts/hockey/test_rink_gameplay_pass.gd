@@ -5,15 +5,42 @@ const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_inp
 const AiCenterInputSource: GDScript = preload("res://scripts/hockey/input/ai_center_input_source.gd")
 const SkaterCollisionManagerScript: GDScript = preload("res://scripts/hockey/skater_collision_manager.gd")
 
+const VISUAL_RINK_SCALE: Vector3 = Vector3(1.14, 1.0, 1.14)
+const EXPANDED_HOME_GOAL_X: float = 20.75
+const EXPANDED_AWAY_GOAL_X: float = -20.75
+
 var _reward_target_player: Node3D = null
 var _collision_manager: Node3D = null
 var _control_side: String = "HOME"
 
 func _ready() -> void:
 	super._ready()
+	world.scale = VISUAL_RINK_SCALE
 	_reward_target_player = _player
 	_build_collision_manager()
 	_apply_control_side(_control_side, false)
+
+func _configure_camera() -> void:
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 34.0
+	camera.global_position = Vector3(0.0, 30.0, 27.0)
+	camera.look_at(Vector3.ZERO, Vector3.UP)
+
+func _check_goal_state() -> void:
+	if _puck == null:
+		return
+	if _goal_lockout:
+		return
+
+	var puck_position: Vector3 = _puck.global_position
+	var is_inside_goal_width: bool = abs(puck_position.z) <= GOAL_WIDTH * 0.5 + 0.35
+	if not is_inside_goal_width:
+		return
+
+	if puck_position.x >= EXPANDED_HOME_GOAL_X:
+		_register_goal("HOME")
+	elif puck_position.x <= EXPANDED_AWAY_GOAL_X:
+		_register_goal("AWAY")
 
 func _build_ui() -> void:
 	super._build_ui()
