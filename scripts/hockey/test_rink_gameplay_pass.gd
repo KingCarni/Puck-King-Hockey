@@ -1,28 +1,29 @@
 extends "res://scripts/hockey/test_rink_art_pass.gd"
 
 const InputBindings: GDScript = preload("res://scripts/hockey/input/input_bindings.gd")
+const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_input_source.gd")
+const AiCenterInputSource: GDScript = preload("res://scripts/hockey/input/ai_center_input_source.gd")
 const SkaterCollisionManagerScript: GDScript = preload("res://scripts/hockey/skater_collision_manager.gd")
 
 var _reward_target_player: Node3D = null
 var _collision_manager: Node3D = null
+var _control_side: String = "HOME"
 
 func _ready() -> void:
 	super._ready()
 	_reward_target_player = _player
 	_build_collision_manager()
-	_show_controller_owner_hint()
+	_apply_control_side(_control_side, false)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F1:
-			_set_controller_owner(InputBindings.CONTROLLER_OWNER_P1)
-			get_viewport().set_input_as_handled()
-			return
-		if event.keycode == KEY_F2:
-			_set_controller_owner(InputBindings.CONTROLLER_OWNER_P2)
-			get_viewport().set_input_as_handled()
-			return
-	super._unhandled_input(event)
+func _build_ui() -> void:
+	super._build_ui()
+	if _pause_menu != null:
+		if _pause_menu.has_signal("control_home_requested"):
+			_pause_menu.control_home_requested.connect(_on_control_home_requested)
+		if _pause_menu.has_signal("control_away_requested"):
+			_pause_menu.control_away_requested.connect(_on_control_away_requested)
+		if _pause_menu.has_method("set_control_side"):
+			_pause_menu.call("set_control_side", _control_side)
 
 func _build_collision_manager() -> void:
 	_collision_manager = Node3D.new()
@@ -43,18 +44,40 @@ func _add_collision_body(bodies: Array[Node3D], body: Node3D) -> void:
 	if body != null:
 		bodies.append(body)
 
-func _set_controller_owner(owner: String) -> void:
-	InputBindings.set_controller_owner(owner)
-	if _hud == null:
-		return
-	var label: String = "P1" if owner == InputBindings.CONTROLLER_OWNER_P1 else "P2"
-	_hud.show_notification("CONTROLLER: %s  •  F1=P1  F2=P2" % label, Color(1.0, 0.78, 0.10, 1.0), 2.0)
+func _on_control_home_requested() -> void:
+	_apply_control_side("HOME", true)
 
-func _show_controller_owner_hint() -> void:
-	if _hud == null:
+func _on_control_away_requested() -> void:
+	_apply_control_side("AWAY", true)
+
+func _apply_control_side(side: String, announce: bool) -> void:
+	_control_side = side
+	if _pause_menu != null and _pause_menu.has_method("set_control_side"):
+		_pause_menu.call("set_control_side", _control_side)
+
+	if _control_side == "HOME":
+		InputBindings.set_controller_owner(InputBindings.CONTROLLER_OWNER_P1)
+		_set_human_control(_player, "p1")
+		_set_cpu_control(_away_skater, -1.0)
+	else:
+		InputBindings.set_controller_owner(InputBindings.CONTROLLER_OWNER_P2)
+		_set_cpu_control(_player, 1.0)
+		_set_human_control(_away_skater, "p2")
+
+	if announce and _hud != null:
+		_hud.show_notification("YOU CONTROL: %s" % _control_side, Color(1.0, 0.78, 0.10, 1.0), 1.8)
+
+func _set_human_control(skater: Node3D, prefix: String) -> void:
+	if skater == null or not skater.has_method("set_input_source"):
 		return
-	var label: String = "P1" if InputBindings.get_controller_owner() == InputBindings.CONTROLLER_OWNER_P1 else "P2"
-	_hud.show_notification("CONTROLLER: %s  •  F1=P1  F2=P2" % label, Color(1.0, 0.78, 0.10, 1.0), 2.0)
+	skater.call("set_input_source", HumanInputSource.new(prefix))
+
+func _set_cpu_control(skater: Node3D, attack_direction: float) -> void:
+	if skater == null or not skater.has_method("set_input_source"):
+		return
+	var ai_source: RefCounted = AiCenterInputSource.new()
+	ai_source.call("setup", skater, _puck, attack_direction)
+	skater.call("set_input_source", ai_source)
 
 func _register_goal(team: String) -> void:
 	_reward_target_player = _player if team == "HOME" else _away_skater
@@ -73,7 +96,6 @@ func _register_goal(team: String) -> void:
 	if ends_match:
 		return
 
-	# In local multiplayer, reward the scorer regardless of side.
 	_schedule_goal_draft(team)
 
 func _schedule_goal_draft(team: String) -> void:
