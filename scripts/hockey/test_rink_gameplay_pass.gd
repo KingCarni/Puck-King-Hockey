@@ -9,13 +9,15 @@ const GameCameraScript: GDScript = preload("res://scripts/match/game_camera.gd")
 const VISUAL_RINK_SCALE: Vector3 = Vector3(1.14, 1.0, 1.14)
 const EXPANDED_HOME_GOAL_X: float = 20.75
 const EXPANDED_AWAY_GOAL_X: float = -20.75
+const LEGAL_GOAL_HALF_WIDTH: float = 1.48
+const MIN_GOAL_ENTRY_SPEED: float = 3.0
 
 var _reward_target_player: Node3D = null
 var _collision_manager: Node3D = null
 var _control_side: String = "HOME"
 var _game_camera: Node = null
-# Display name -> {"goals": int} — saves/hits are read from the nodes at match end.
 var _goal_stats: Dictionary = {}
+var _current_reward_options: Array[Dictionary] = []
 
 func _ready() -> void:
 	super._ready()
@@ -46,20 +48,50 @@ func _configure_camera() -> void:
 	camera.look_at(Vector3.ZERO, Vector3.UP)
 
 func _check_goal_state() -> void:
-	if _puck == null:
-		return
-	if _goal_lockout:
+	if _puck == null or _goal_lockout:
 		return
 
 	var puck_position: Vector3 = _puck.global_position
-	var is_inside_goal_width: bool = abs(puck_position.z) <= GOAL_WIDTH * 0.5 + 0.35
-	if not is_inside_goal_width:
-		return
-
 	if puck_position.x >= EXPANDED_HOME_GOAL_X:
-		_register_goal("HOME")
+		if _is_legal_goal_crossing("HOME"):
+			_register_goal("HOME")
+		else:
+			_reject_illegal_goal_attempt("HOME")
 	elif puck_position.x <= EXPANDED_AWAY_GOAL_X:
-		_register_goal("AWAY")
+		if _is_legal_goal_crossing("AWAY"):
+			_register_goal("AWAY")
+		else:
+			_reject_illegal_goal_attempt("AWAY")
+
+func _is_legal_goal_crossing(team: String) -> bool:
+	if _puck == null:
+		return false
+	if _puck.has_method("is_possessed") and bool(_puck.call("is_possessed")):
+		return false
+
+	var puck_position: Vector3 = _puck.global_position
+	if absf(puck_position.z) > LEGAL_GOAL_HALF_WIDTH:
+		return false
+
+	var previous_position: Vector3 = puck_position
+	if _puck.has_method("get_previous_position"):
+		previous_position = _puck.call("get_previous_position")
+	var velocity: Vector3 = Vector3.ZERO
+	if _puck.has_method("get_velocity"):
+		velocity = _puck.call("get_velocity")
+
+	if team == "HOME":
+		return previous_position.x < EXPANDED_HOME_GOAL_X and velocity.x >= MIN_GOAL_ENTRY_SPEED
+	return previous_position.x > EXPANDED_AWAY_GOAL_X and velocity.x <= -MIN_GOAL_ENTRY_SPEED
+
+func _reject_illegal_goal_attempt(team: String) -> void:
+	# Side-net/crease-crash attempts are cleared instead of counted.
+	var clear_direction: Vector3 = Vector3.LEFT if team == "HOME" else Vector3.RIGHT
+	var z_push: float = 0.70 if _puck.global_position.z >= 0.0 else -0.70
+	if _puck.has_method("poke_free"):
+		_puck.call("poke_free", (clear_direction + Vector3(0.0, 0.0, z_push)).normalized(), 12.0)
+	_puck.global_position.x = (EXPANDED_HOME_GOAL_X - 0.45) if team == "HOME" else (EXPANDED_AWAY_GOAL_X + 0.45)
+	_puck.global_position.y = PUCK_Y
 
 func _build_ui() -> void:
 	super._build_ui()
@@ -147,7 +179,13 @@ func _register_goal(team: String) -> void:
 	if ends_match:
 		return
 
-	_schedule_goal_draft(team)
+	if _is_user_controlled_team(team):
+		_schedule_goal_draft(team)
+	else:
+		_schedule_post_goal_reset()
+
+func _is_user_controlled_team(team: String) -> bool:
+	return team == _control_side
 
 func _credit_goal_scorer(team: String) -> void:
 	if _puck == null or not _puck.has_method("get_last_toucher"):
@@ -155,7 +193,6 @@ func _credit_goal_scorer(team: String) -> void:
 	var scorer: Node3D = _puck.call("get_last_toucher") as Node3D
 	if scorer == null:
 		return
-	# Only credit shooters on the scoring team (no own-goal glory).
 	var home_scorers: Array[StringName] = [&"Player", &"HomeTeammate"]
 	var away_scorers: Array[StringName] = [&"Player2", &"AwayTeammate"]
 	var valid: bool = (team == "HOME" and scorer.name in home_scorers) or (team == "AWAY" and scorer.name in away_scorers)
@@ -166,7 +203,6 @@ func _credit_goal_scorer(team: String) -> void:
 	entry["goals"] = int(entry["goals"]) + 1
 	_goal_stats[display] = entry
 
-# Red goal-light strobe behind the scored-on net.
 func _flash_goal_light(team: String) -> void:
 	var net_x: float = EXPANDED_HOME_GOAL_X if team == "HOME" else EXPANDED_AWAY_GOAL_X
 	var light: OmniLight3D = OmniLight3D.new()
@@ -260,13 +296,14 @@ func _schedule_goal_draft(team: String) -> void:
 func _on_goal_draft_timeout(team: String) -> void:
 	if _match_clock != null and _match_clock.match_over:
 		return
+	if not _is_user_controlled_team(team):
+		_schedule_post_goal_reset()
+		return
 	var label: String = "HOME" if team == "HOME" else "AWAY"
 	if _hud != null:
 		_hud.show_notification("%s DRAFT PICK" % label, Color(1.0, 0.78, 0.10, 1.0), 1.0)
 	_show_reward_draft()
 
-# Active abilities join the stat upgrades in the reward pool; each draft
-# offers a random three so runs diverge.
 func _append_ability_rewards() -> void:
 	_reward_options.append_array([
 		{
@@ -293,14 +330,39 @@ func _append_ability_rewards() -> void:
 	])
 
 func _show_reward_draft() -> void:
+	_current_reward_options = _pick_reward_options()
 	if _reward_draft != null:
-		_reward_draft.set_options(_pick_reward_options())
+		_reward_draft.set_options(_current_reward_options)
 	super._show_reward_draft()
 
-func _pick_reward_options() -> Array:
+func _pick_reward_options() -> Array[Dictionary]:
 	var pool: Array = _reward_options.duplicate()
 	pool.shuffle()
-	return pool.slice(0, 3)
+	var picked: Array[Dictionary] = []
+	for index: int in range(mini(3, pool.size())):
+		picked.append(pool[index])
+	return picked
+
+func _on_reward_selected(index: int, upgrade_id: String) -> void:
+	if index < 0 or index >= _current_reward_options.size():
+		return
+	var option: Dictionary = _current_reward_options[index]
+	var selected_id: String = String(option.get("id", upgrade_id))
+	_selected_upgrades.append(option)
+	_apply_upgrade(selected_id)
+	_update_upgrade_display()
+
+	_reward_visible = false
+	_goal_lockout = false
+	if _reward_draft != null:
+		_reward_draft.hide_draft()
+
+	SfxPlayer.play(SfxPlayer.ID_REWARD_PICK)
+	_hud.show_notification("PICKED UP: %s" % String(option.get("title", selected_id)), Color(1.0, 0.78, 0.10, 1.0), 1.8)
+	_set_match_enabled(true)
+	_reset_faceoff(true)
+	if _match_clock != null:
+		_match_clock.resume()
 
 func _apply_upgrade(upgrade_id: String) -> void:
 	var target: Node3D = _reward_target_player if _reward_target_player != null else _player
