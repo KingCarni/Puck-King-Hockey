@@ -11,15 +11,25 @@ const PUCK_Y: float = 0.18
 @export var carry_distance: float = 1.05
 @export var carry_lag_speed: float = 14.0
 @export var loose_friction: float = 3.2
-@export var board_bounce: float = 0.72
+@export var board_bounce: float = 0.80
+@export var board_bounce_jitter_degrees: float = 3.5
 @export var wrist_shot_speed: float = 17.0
 @export var slap_shot_speed: float = 27.0
 @export var owner_velocity_inheritance: float = 0.28
-@export var max_loose_speed: float = 32.0
+@export var max_loose_speed: float = 36.0
+@export var hot_shot_speed_threshold: float = 23.0
+
+# Magnet Puck ability: loose pucks curve gently toward this skater.
+var magnet_target: Node3D = null
+var magnet_radius: float = 2.8
+var magnet_pull: float = 16.0
 
 var _velocity: Vector3 = Vector3.ZERO
 var _owner: Node3D = null
 var _is_possessed: bool = false
+var _last_toucher: Node3D = null
+var _sprite_material: StandardMaterial3D = null
+var _is_hot: bool = false
 
 @onready var _puck_mesh: MeshInstance3D = $PuckMesh
 
@@ -28,13 +38,41 @@ func _ready() -> void:
 	global_position.y = PUCK_Y
 
 func _physics_process(delta: float) -> void:
+	_update_hot_glow()
 	if _is_possessed:
 		return
 
+	_apply_magnet(delta)
 	global_position += _velocity * delta
 	global_position.y = PUCK_Y
 	_velocity = _velocity.move_toward(Vector3.ZERO, loose_friction * delta)
 	_apply_rink_bounds()
+
+func _apply_magnet(delta: float) -> void:
+	if magnet_target == null or not is_instance_valid(magnet_target):
+		return
+	var speed: float = _velocity.length()
+	if speed > 15.0:
+		return  # full slap shots stay honest
+	var to_target: Vector3 = _flat_position(magnet_target.global_position) - _flat_position(global_position)
+	var distance: float = to_target.length()
+	if distance > magnet_radius or distance < 0.05:
+		return
+	var pull_strength: float = magnet_pull * (1.0 - distance / magnet_radius)
+	_velocity += to_target.normalized() * pull_strength * delta
+
+# Full-power shots streak hot orange (Rocket Shot reads even hotter).
+func _update_hot_glow() -> void:
+	if _sprite_material == null:
+		return
+	var hot: bool = not _is_possessed and _velocity.length() > hot_shot_speed_threshold
+	if hot == _is_hot:
+		return
+	_is_hot = hot
+	_sprite_material.albedo_color = Color(1.55, 1.05, 0.72, 1.0) if hot else Color.WHITE
+
+func get_last_toucher() -> Node3D:
+	return _last_toucher if _last_toucher != null and is_instance_valid(_last_toucher) else null
 
 func can_be_picked_up_by(player: Node3D) -> bool:
 	if _is_possessed:
@@ -45,6 +83,7 @@ func can_be_picked_up_by(player: Node3D) -> bool:
 
 func take_possession(owner: Node3D) -> void:
 	_owner = owner
+	_last_toucher = owner
 	_is_possessed = true
 	_velocity = Vector3.ZERO
 
@@ -62,14 +101,16 @@ func update_possession(target_position: Vector3, owner_velocity: Vector3, delta:
 	global_position.y = PUCK_Y
 	_velocity = Vector3(owner_velocity.x, 0.0, owner_velocity.z)
 
-func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0) -> void:
+func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0, speed_scale: float = 1.0) -> void:
 	var shot_direction: Vector3 = Vector3(direction.x, 0.0, direction.z)
 	if shot_direction.length_squared() <= 0.001:
 		shot_direction = Vector3.FORWARD
 
+	if _owner != null:
+		_last_toucher = _owner
 	var normalized_direction: Vector3 = shot_direction.normalized()
 	var clamped_power: float = clamp(shot_power, 0.0, 1.0)
-	var shot_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power)
+	var shot_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power) * maxf(speed_scale, 0.1)
 	var owner_influence: Vector3 = Vector3(owner_velocity.x, 0.0, owner_velocity.z) * owner_velocity_inheritance
 
 	_is_possessed = false
@@ -98,10 +139,19 @@ func _apply_rink_bounds() -> void:
 	if hit_horizontal_board:
 		global_position.x = clamped_x
 		_velocity.x = -_velocity.x * board_bounce
+		_jitter_bounce()
 
 	if hit_vertical_board:
 		global_position.z = clamped_z
 		_velocity.z = -_velocity.z * board_bounce
+		_jitter_bounce()
+
+# Real boards never give a perfect reflection; a couple of degrees of chaos
+# makes bank passes and ricochets feel alive.
+func _jitter_bounce() -> void:
+	if _velocity.length_squared() < 4.0:
+		return
+	_velocity = _velocity.rotated(Vector3.UP, deg_to_rad(randf_range(-board_bounce_jitter_degrees, board_bounce_jitter_degrees)))
 
 func _flat_position(position: Vector3) -> Vector3:
 	return Vector3(position.x, 0.0, position.z)
@@ -124,7 +174,8 @@ func _build_placeholder_visuals() -> void:
 		_puck_mesh.mesh = plane
 		_puck_mesh.position = Vector3(0.0, 0.03, 0.0)
 		_puck_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_puck_mesh.material_override = SkaterSpriteVisuals.make_sprite_material(puck_texture)
+		_sprite_material = SkaterSpriteVisuals.make_sprite_material(puck_texture)
+		_puck_mesh.material_override = _sprite_material
 		return
 
 	var puck_material: StandardMaterial3D = StandardMaterial3D.new()

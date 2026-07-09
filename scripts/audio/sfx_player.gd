@@ -16,6 +16,9 @@ const ID_UI_FOCUS: String = "ui_focus"
 const ID_REWARD_PICK: String = "reward_pick"
 const ID_PERIOD_END: String = "period_end"
 const ID_MATCH_WIN: String = "match_win"
+const ID_CROWD_CHEER: String = "crowd_cheer"
+const ID_SAVE_THUMP: String = "save_thump"
+const ID_WHISTLE: String = "whistle"
 
 var sfx_volume_db: float = -4.0
 var music_volume_db: float = -8.0
@@ -78,6 +81,9 @@ func _build_samples() -> void:
 	_samples[ID_REWARD_PICK] = _make_chime([523.25, 659.25, 783.99], 0.16)
 	_samples[ID_PERIOD_END] = _make_descending_whistle(0.85, 880.0, 320.0)
 	_samples[ID_MATCH_WIN] = _make_chime([523.25, 659.25, 783.99, 1046.50], 0.22)
+	_samples[ID_CROWD_CHEER] = _make_crowd_swell(1.9, 0.62)
+	_samples[ID_SAVE_THUMP] = _make_noise_burst(0.11, 0.62, 0.008)
+	_samples[ID_WHISTLE] = _make_ref_whistle(0.55, 2350.0)
 
 # ---------- waveform helpers ----------
 
@@ -182,3 +188,30 @@ func _make_horn_blat(duration: float, freq_low: float, freq_high: float) -> Audi
 
 func _saw_wave(phase: float) -> float:
 	return 2.0 * (phase - floor(phase + 0.5))
+
+# Band-passed noise that swells in and tails out — reads as a crowd roar.
+func _make_crowd_swell(duration: float, amp: float) -> AudioStreamWAV:
+	var count: int = int(duration * SAMPLE_RATE)
+	var samples: PackedFloat32Array = PackedFloat32Array()
+	samples.resize(count)
+	var env: PackedFloat32Array = _adsr(count, duration * 0.22, duration * 0.55)
+	var last: float = 0.0
+	var slow: float = 0.0
+	for i in range(count):
+		var n: float = randf() * 2.0 - 1.0
+		last = last * 0.82 + n * 0.18
+		slow = slow * 0.9992 + (randf() * 2.0 - 1.0) * 0.0008
+		samples[i] = (last + slow * 24.0) * amp * env[i]
+	return _make_stream(samples)
+
+# Referee whistle: strong tone with a fast trill.
+func _make_ref_whistle(duration: float, freq: float) -> AudioStreamWAV:
+	var count: int = int(duration * SAMPLE_RATE)
+	var samples: PackedFloat32Array = PackedFloat32Array()
+	samples.resize(count)
+	var env: PackedFloat32Array = _adsr(count, 0.01, duration * 0.3)
+	for i in range(count):
+		var t: float = float(i) / float(SAMPLE_RATE)
+		var trill: float = 1.0 + 0.012 * sin(TAU * 38.0 * t)
+		samples[i] = (sin(TAU * freq * trill * t) * 0.42 + sin(TAU * freq * 1.5 * t) * 0.10) * env[i]
+	return _make_stream(samples)

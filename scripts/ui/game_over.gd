@@ -12,6 +12,7 @@ var _root: Control = null
 var _frame: PanelContainer = null
 var _title_label: Label = null
 var _score_label: Label = null
+var _stars_label: Label = null
 var _rematch_button: Button = null
 var _menu_button: Button = null
 var _is_open: bool = false
@@ -85,6 +86,12 @@ func _build_ui() -> void:
 	_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_score_label)
 
+	_stars_label = Label.new()
+	_stars_label.text = ""
+	_stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_stars_label.visible = false
+	vbox.add_child(_stars_label)
+
 	var spacer: Control = Control.new()
 	spacer.custom_minimum_size = Vector2(0.0, 18.0)
 	vbox.add_child(spacer)
@@ -100,6 +107,20 @@ func _build_ui() -> void:
 	if _palette != null:
 		_palette.style_display_label(_title_label, 70, _palette.COLOR_BONE)
 		_palette.style_display_label(_score_label, 120, _palette.COLOR_HOT_GOLD)
+		_palette.style_accent_label(_stars_label, 26, _palette.COLOR_GOLD)
+
+# Three-stars / MVP block. Pass display lines like "★ P1 CAPTAIN — 2 G, 3 HIT".
+func set_three_stars(lines: Array) -> void:
+	if _stars_label == null:
+		return
+	if lines.is_empty():
+		_stars_label.visible = false
+		return
+	var text_lines: Array[String] = []
+	for line in lines:
+		text_lines.append(String(line))
+	_stars_label.text = "\n".join(text_lines)
+	_stars_label.visible = true
 
 func _make_button(text: String, fill: Color) -> Button:
 	var btn: Button = Button.new()

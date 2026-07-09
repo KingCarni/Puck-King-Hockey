@@ -1,7 +1,13 @@
 extends Node3D
 
-# Simple crease goalie: idle → track puck → move across crease → save →
-# recover → return to center. Never leaves the crease, never crosses center.
+# Crease goalie 2.0: idle → track → slide → save → recover.
+#  - difficulty scales reaction time and lateral speed
+#  - sliding fast opens the five-hole (smaller effective block radius)
+#  - rebound control: hard shots kicked to the corner, soft close pucks
+#    are covered, then frozen (whistle → faceoff via the puck_frozen signal)
+#  - butterfly squash pulse on every save
+
+signal puck_frozen
 
 const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
 
@@ -22,12 +28,23 @@ const PLAYER_Y: float = 0.72
 @export var crash_clear_speed: float = 14.0
 @export var save_cooldown_seconds: float = 0.36
 @export var save_flash_seconds: float = 0.30
+## 0 = beer league, 1 = brick wall. Scales reaction time and lateral speed.
+@export var difficulty: float = 0.65
+@export var cover_radius: float = 0.95
+@export var cover_speed_threshold: float = 8.0
+@export var freeze_after_seconds: float = 0.85
 @export var goalie_texture_path: String = "res://assets/art/characters/pkh_goalie_home.svg"
+
+var saves_made: int = 0
 
 var _puck: Node = null
 var _lateral_velocity: float = 0.0
 var _save_cooldown_timer: float = 0.0
 var _save_flash_timer: float = 0.0
+var _reaction_timer: float = 0.0
+var _shot_was_incoming: bool = false
+var _cover_timer: float = 0.0
+var _is_covering: bool = false
 var _base_material: StandardMaterial3D = null
 var _save_material: StandardMaterial3D = null
 
@@ -42,6 +59,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_save_cooldown_timer = max(_save_cooldown_timer - delta, 0.0)
 	_save_flash_timer = max(_save_flash_timer - delta, 0.0)
+	_reaction_timer = max(_reaction_timer - delta, 0.0)
+	if _is_covering:
+		_update_cover(delta)
+		_update_visuals(delta)
+		return
 	_update_positioning(delta)
 	_update_block()
 	_update_visuals(delta)
@@ -51,6 +73,10 @@ func reset_to_center() -> void:
 	_lateral_velocity = 0.0
 	_save_cooldown_timer = 0.0
 	_save_flash_timer = 0.0
+	_reaction_timer = 0.0
+	_shot_was_incoming = false
+	_cover_timer = 0.0
+	_is_covering = false
 
 func _guard_x() -> float:
 	return guard_side * guard_distance_from_center
@@ -59,9 +85,10 @@ func _update_positioning(delta: float) -> void:
 	var target_z: float = _pick_target_z()
 	var delta_z: float = target_z - global_position.z
 
+	var effective_max_speed: float = lateral_max_speed * lerpf(0.82, 1.12, clampf(difficulty, 0.0, 1.0))
 	if abs(delta_z) > 0.06:
 		_lateral_velocity += signf(delta_z) * lateral_acceleration * delta
-		_lateral_velocity = clampf(_lateral_velocity, -lateral_max_speed, lateral_max_speed)
+		_lateral_velocity = clampf(_lateral_velocity, -effective_max_speed, effective_max_speed)
 	else:
 		_lateral_velocity = move_toward(_lateral_velocity, 0.0, friction * delta)
 
@@ -84,7 +111,14 @@ func _pick_target_z() -> float:
 		puck_velocity = raw_velocity
 
 	var toward_goal: bool = puck_velocity.x * guard_side > 2.0
-	if toward_goal and absf(puck_velocity.x) > 0.5:
+
+	# Reaction time: the goalie needs a beat to read a fresh shot. Lower
+	# difficulty = longer beat = more goals on quick releases.
+	if toward_goal and not _shot_was_incoming:
+		_reaction_timer = lerpf(0.30, 0.05, clampf(difficulty, 0.0, 1.0))
+	_shot_was_incoming = toward_goal
+
+	if toward_goal and absf(puck_velocity.x) > 0.5 and _reaction_timer <= 0.0:
 		var time_to_line: float = (_guard_x() - puck_position.x) / puck_velocity.x
 		if time_to_line > 0.0 and time_to_line < 1.4:
 			return clampf(puck_position.z + puck_velocity.z * time_to_line, -crease_half_width, crease_half_width)
@@ -101,16 +135,62 @@ func _update_block() -> void:
 	var flat_delta: Vector3 = puck_node.global_position - global_position
 	flat_delta.y = 0.0
 	var distance: float = flat_delta.length()
-	if distance > crash_poke_radius:
+
+	# Five-hole: sliding hard across the crease shrinks coverage.
+	var sliding_fast: bool = absf(_lateral_velocity) > lateral_max_speed * 0.72
+	var effective_poke_radius: float = crash_poke_radius * (0.62 if sliding_fast else 1.0)
+	var effective_block_radius: float = block_radius * (0.62 if sliding_fast else 1.0)
+	if distance > effective_poke_radius:
 		return
 
-	var clear_speed: float = save_deflect_speed if distance > block_radius else crash_clear_speed
+	var puck_speed: float = 0.0
+	var raw_velocity: Variant = _puck.get("_velocity")
+	if raw_velocity is Vector3:
+		puck_speed = Vector3(raw_velocity.x, 0.0, raw_velocity.z).length()
+	var puck_loose: bool = not bool(_puck.get("_is_possessed"))
+
+	# Rebound control: soft loose pucks in tight get covered and frozen.
+	if puck_loose and puck_speed < cover_speed_threshold and distance <= cover_radius:
+		_start_cover()
+		return
+
+	var clear_speed: float = save_deflect_speed if distance > effective_block_radius else crash_clear_speed
 	var clear_direction: Vector3 = _get_clear_direction(puck_node.global_position)
 	if _puck.has_method("poke_free"):
 		_puck.call("poke_free", clear_direction, clear_speed)
+	_register_save()
+	global_position.x += guard_side * 0.12
+
+func _register_save() -> void:
+	saves_made += 1
 	_save_cooldown_timer = save_cooldown_seconds
 	_save_flash_timer = save_flash_seconds
-	global_position.x += guard_side * 0.12
+	_butterfly_pulse()
+	SfxPlayer.play(SfxPlayer.ID_SAVE_THUMP, randf_range(0.9, 1.1))
+
+# Quick pad-stack squash so saves read as a butterfly drop.
+func _butterfly_pulse() -> void:
+	if _body_mesh == null:
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(_body_mesh, "scale", Vector3(1.30, 1.0, 0.74), 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_body_mesh, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _start_cover() -> void:
+	_is_covering = true
+	_cover_timer = freeze_after_seconds
+	_register_save()
+	if _puck != null and _puck.has_method("take_possession"):
+		_puck.call("take_possession", self)
+
+func _update_cover(delta: float) -> void:
+	_cover_timer -= delta
+	# Tuck the puck under the body while covered.
+	if _puck != null and _puck.has_method("update_possession"):
+		_puck.call("update_possession", global_position + Vector3(-guard_side * 0.35, 0.0, 0.0), Vector3.ZERO, delta)
+	if _cover_timer <= 0.0:
+		_is_covering = false
+		puck_frozen.emit()
 
 func _get_clear_direction(puck_position: Vector3) -> Vector3:
 	# Always clear away from the net mouth and toward a corner. This prevents

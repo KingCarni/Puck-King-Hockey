@@ -33,6 +33,10 @@ const HIT_STOP_SECONDS: float = 0.06
 @export var input_prefix: String = "p1"
 @export var teammate_path: NodePath = NodePath("")
 @export var pass_power: float = 0.24
+## Rocket Shot ability: multiplies released shot speed.
+@export var shot_speed_scale: float = 1.0
+## Freeze Blast ability: checks freeze the victim for this many seconds.
+@export var check_freeze_seconds: float = 0.0
 
 var _move_velocity: Vector3 = Vector3.ZERO
 var _last_facing_direction: Vector3 = Vector3.FORWARD
@@ -41,7 +45,9 @@ var _is_charging_shot: bool = false
 var _shot_charge_time: float = 0.0
 var _check_cooldown_timer: float = 0.0
 var _check_active_timer: float = 0.0
+var _knockdown_timer: float = 0.0
 var _has_hit_during_check: bool = false
+var hits_delivered: int = 0
 var _body_material: StandardMaterial3D = null
 var _checking_material: StandardMaterial3D = null
 
@@ -69,6 +75,17 @@ func set_input_source(source: RefCounted) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_check_timers(delta)
+
+	# Knocked down: no control until the skater picks themselves up.
+	if _knockdown_timer > 0.0:
+		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, ice_friction * 1.6 * delta)
+		velocity = Vector3(_move_velocity.x, 0.0, _move_velocity.z)
+		move_and_slide()
+		_move_velocity = Vector3(velocity.x, 0.0, velocity.z)
+		_apply_rink_bounds()
+		_update_puck_interaction(delta)
+		return
+
 	_handle_check_input()
 
 	var input_direction: Vector3 = _get_input_direction()
@@ -126,6 +143,7 @@ func _rotate_visuals(delta: float) -> void:
 func _update_check_timers(delta: float) -> void:
 	_check_cooldown_timer = max(_check_cooldown_timer - delta, 0.0)
 	_check_active_timer = max(_check_active_timer - delta, 0.0)
+	_knockdown_timer = max(_knockdown_timer - delta, 0.0)
 
 func _handle_check_input() -> void:
 	if not _input_source.is_check_just_pressed():
@@ -163,14 +181,22 @@ func _update_check_collision() -> void:
 		if forward_dot < check_forward_dot:
 			continue
 
+		var effects: Dictionary = {}
+		if check_freeze_seconds > 0.0:
+			effects["freeze"] = check_freeze_seconds
+
 		if target.has_method("receive_check"):
-			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity)
+			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity, effects)
 
 		if _puck != null and _puck.has_method("poke_free") and _check_should_pop_puck(target):
 			_puck.call("poke_free", facing_direction + target_direction * 0.35, check_puck_force)
 
+		hits_delivered += 1
 		_has_hit_during_check = true
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
+		var big_hit: bool = check_knockback_force > 15.0 or _move_velocity.length() > max_speed
+		SfxPlayer.play(SfxPlayer.ID_CHECK_HIT, 0.85 if big_hit else 1.05, 2.0 if big_hit else 0.0)
+		get_tree().call_group("game_camera", "add_shake", 0.55 if big_hit else 0.25)
 		_trigger_hit_stop()
 		return
 
@@ -187,13 +213,28 @@ func _trigger_hit_stop() -> void:
 	var timer: SceneTreeTimer = get_tree().create_timer(HIT_STOP_SECONDS, true, false, true)
 	timer.timeout.connect(func() -> void: Engine.time_scale = 1.0)
 
-func receive_check(direction: Vector3, force: float, checker_velocity: Vector3) -> void:
+func receive_check(direction: Vector3, force: float, checker_velocity: Vector3, effects: Dictionary = {}) -> void:
 	var hit_direction: Vector3 = Vector3(direction.x, 0.0, direction.z)
 	if hit_direction.length_squared() <= 0.001:
 		hit_direction = Vector3.RIGHT
 	var inherited_velocity: Vector3 = Vector3(checker_velocity.x, 0.0, checker_velocity.z) * 0.22
 	_move_velocity = hit_direction.normalized() * force + inherited_velocity
 	_cancel_shot_charge()
+
+	var freeze_seconds: float = float(effects.get("freeze", 0.0))
+	var near_boards: bool = absf(global_position.z) > RINK_HALF_WIDTH - 1.3 or absf(global_position.x) > RINK_HALF_LENGTH - 1.3
+	if freeze_seconds > 0.0:
+		_knockdown_timer = freeze_seconds
+	elif force > 15.0 or near_boards:
+		# Huge hit (or pinned into the boards): spin out.
+		_knockdown_timer = 0.8 if force > 15.0 else 0.55
+		_start_knockdown_spin()
+
+func _start_knockdown_spin() -> void:
+	if _visual_root == null:
+		return
+	var tween: Tween = create_tween()
+	tween.tween_property(_visual_root, "rotation:y", _visual_root.rotation.y + TAU * 2.0, 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _update_check_visuals() -> void:
 	if _body_material == null or _checking_material == null:
@@ -264,7 +305,7 @@ func _release_charged_shot() -> void:
 		return
 
 	var shot_power: float = max(_get_shot_power(), minimum_shot_power)
-	_puck.call("shoot", _get_facing_direction(), _move_velocity, shot_power)
+	_puck.call("shoot", _get_facing_direction(), _move_velocity, shot_power, shot_speed_scale)
 	_cancel_shot_charge()
 
 func _cancel_shot_charge() -> void:
