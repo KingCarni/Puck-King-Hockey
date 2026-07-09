@@ -6,6 +6,8 @@ extends "res://scripts/hockey/player_controller.gd"
 
 const EXPANDED_RINK_HALF_LENGTH: float = 24.2
 const EXPANDED_RINK_HALF_WIDTH: float = 11.6
+const CALL_PASS_POWER: float = 0.42
+const MIN_CALL_PASS_SPEED_BONUS: float = 2.5
 
 func _apply_rink_bounds() -> void:
 	var clamped_x: float = clamp(global_position.x, -EXPANDED_RINK_HALF_LENGTH, EXPANDED_RINK_HALF_LENGTH)
@@ -55,7 +57,13 @@ func _try_call_for_pass() -> bool:
 
 func _get_teammate_carriers() -> Array[Node3D]:
 	var result: Array[Node3D] = []
-	var names: Array[String] = ["HomeTeammate", "HomeTeammate2"] if input_prefix == "p1" else ["AwayTeammate", "AwayTeammate2"]
+	var names: Array[String] = []
+	if input_prefix == "p1":
+		names.append("HomeTeammate")
+		names.append("HomeTeammate2")
+	else:
+		names.append("AwayTeammate")
+		names.append("AwayTeammate2")
 	for node_name: String in names:
 		var teammate: Node3D = get_node_or_null("../" + node_name) as Node3D
 		if teammate != null:
@@ -67,8 +75,11 @@ func _force_pass_from(carrier: Node3D) -> void:
 	var raw_velocity: Variant = carrier.get("_move_velocity")
 	if raw_velocity is Vector3:
 		carrier_velocity = raw_velocity
-	var lead_target: Vector3 = global_position + _move_velocity * 0.22
+	var lead_target: Vector3 = global_position + _move_velocity * 0.35
 	var pass_direction: Vector3 = Vector3(lead_target.x - carrier.global_position.x, 0.0, lead_target.z - carrier.global_position.z)
 	if pass_direction.length_squared() <= 0.001:
+		pass_direction = Vector3(global_position.x - carrier.global_position.x, 0.0, global_position.z - carrier.global_position.z)
+	if pass_direction.length_squared() <= 0.001:
 		return
-	_puck.call("shoot", pass_direction.normalized(), carrier_velocity, pass_power)
+	var boosted_carrier_velocity: Vector3 = carrier_velocity + pass_direction.normalized() * MIN_CALL_PASS_SPEED_BONUS
+	_puck.call("shoot", pass_direction.normalized(), boosted_carrier_velocity, CALL_PASS_POWER)
