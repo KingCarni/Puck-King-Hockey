@@ -59,7 +59,6 @@ func _build_ui() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
-
 	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.07, 0.07, 0.085, 0.98)
 	panel_style.border_color = Color(1.0, 0.78, 0.10, 1.0)
@@ -72,13 +71,11 @@ func _build_ui() -> void:
 	panel_style.content_margin_top = 22
 	panel_style.content_margin_bottom = 22
 	_panel.add_theme_stylebox_override("panel", panel_style)
-
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.name = "Content"
 	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 	vbox.add_theme_constant_override("separation", 16)
 	_panel.add_child(vbox)
-
 	_ribbon = PanelContainer.new()
 	_ribbon.name = "Ribbon"
 	_ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -93,13 +90,11 @@ func _build_ui() -> void:
 	ribbon_style.content_margin_bottom = 7
 	_ribbon.add_theme_stylebox_override("panel", ribbon_style)
 	vbox.add_child(_ribbon)
-
 	_ribbon_label = Label.new()
 	_ribbon_label.name = "RibbonLabel"
 	_ribbon_label.text = "PICK"
 	_ribbon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ribbon.add_child(_ribbon_label)
-
 	var icon_panel: PanelContainer = PanelContainer.new()
 	icon_panel.name = "IconArea"
 	icon_panel.custom_minimum_size = Vector2(0.0, 126.0)
@@ -111,34 +106,29 @@ func _build_ui() -> void:
 	icon_style.set_corner_radius_all(8)
 	icon_panel.add_theme_stylebox_override("panel", icon_style)
 	vbox.add_child(icon_panel)
-
 	_icon_rect = TextureRect.new()
 	_icon_rect.name = "IconTexture"
 	_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_icon_rect.visible = false
 	icon_panel.add_child(_icon_rect)
-
 	_icon_glyph = Label.new()
 	_icon_glyph.name = "IconGlyph"
 	_icon_glyph.text = "★"
 	_icon_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_icon_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	icon_panel.add_child(_icon_glyph)
-
 	_title_label = Label.new()
 	_title_label.name = "Title"
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_title_label)
-
 	_description_label = Label.new()
 	_description_label.name = "Description"
 	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(_description_label)
-
 	_hotkey_pill = PanelContainer.new()
 	_hotkey_pill.name = "HotkeyPill"
 	_hotkey_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -153,12 +143,10 @@ func _build_ui() -> void:
 	pill_style.content_margin_bottom = 7
 	_hotkey_pill.add_theme_stylebox_override("panel", pill_style)
 	vbox.add_child(_hotkey_pill)
-
 	_hotkey_label_node = Label.new()
 	_hotkey_label_node.name = "HotkeyText"
 	_hotkey_label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hotkey_pill.add_child(_hotkey_label_node)
-
 	_button = Button.new()
 	_button.name = "ChooseButton"
 	_button.text = "CHOOSE"
@@ -168,9 +156,8 @@ func _build_ui() -> void:
 	_button.pressed.connect(_on_choose_pressed)
 	_button.focus_entered.connect(_on_focus_entered)
 	_button.focus_exited.connect(_on_focus_exited)
-	button_down.connect(_on_focus_entered)
-	button_up.connect(_on_focus_exited)
-
+	_button.button_down.connect(_on_focus_entered)
+	_button.button_up.connect(_on_focus_exited)
 	if _palette != null:
 		_palette.style_accent_label(_ribbon_label, 20, _palette.COLOR_BONE)
 		_palette.style_display_label(_icon_glyph, 72, _palette.COLOR_GOLD)
