@@ -4,11 +4,13 @@ extends Node3D
 # This is intentionally not full physics. It keeps sprites from ghosting through
 # each other and injects a small bounce so checks/crowded crease plays feel solid.
 
-@export var separation_radius: float = 1.08
-@export var goalie_separation_radius: float = 1.20
-@export var separation_strength: float = 0.42
-@export var velocity_impulse: float = 2.8
-@export var max_position_push: float = 0.22
+@export var separation_radius: float = 1.34
+@export var goalie_separation_radius: float = 1.42
+@export var separation_strength: float = 0.82
+@export var velocity_impulse: float = 4.8
+@export var max_position_push: float = 0.46
+@export var hard_overlap_threshold: float = 0.42
+@export var hard_overlap_hit_force: float = 9.0
 
 var _bodies: Array[Node3D] = []
 
@@ -21,7 +23,6 @@ func setup(bodies: Array[Node3D]) -> void:
 func _physics_process(delta: float) -> void:
 	if _bodies.size() < 2:
 		return
-
 	for i: int in range(_bodies.size()):
 		var a: Node3D = _bodies[i]
 		if a == null or not is_instance_valid(a):
@@ -36,7 +37,7 @@ func _separate_pair(a: Node3D, b: Node3D, delta: float) -> void:
 	var flat_delta: Vector3 = Vector3(b.global_position.x - a.global_position.x, 0.0, b.global_position.z - a.global_position.z)
 	var distance: float = flat_delta.length()
 	if distance <= 0.001:
-		flat_delta = Vector3.RIGHT
+		flat_delta = _fallback_normal(a, b)
 		distance = 1.0
 
 	var target_radius: float = _pair_radius(a, b)
@@ -60,6 +61,14 @@ func _separate_pair(a: Node3D, b: Node3D, delta: float) -> void:
 
 	_apply_velocity_bump(a, -normal, overlap)
 	_apply_velocity_bump(b, normal, overlap)
+	if overlap >= hard_overlap_threshold and not (_is_goalie(a) or _is_goalie(b)):
+		_apply_soft_check(a, -normal, overlap)
+		_apply_soft_check(b, normal, overlap)
+
+func _fallback_normal(a: Node3D, b: Node3D) -> Vector3:
+	var seed: float = float(a.get_instance_id() % 17 - b.get_instance_id() % 13)
+	var angle: float = seed * 0.63
+	return Vector3(cos(angle), 0.0, sin(angle)).normalized()
 
 func _pair_radius(a: Node3D, b: Node3D) -> float:
 	if _is_goalie(a) or _is_goalie(b):
@@ -67,8 +76,7 @@ func _pair_radius(a: Node3D, b: Node3D) -> float:
 	return separation_radius
 
 func _movement_weight(body: Node3D) -> float:
-	# Goalies should block, not get shoved out of the crease.
-	return 0.25 if _is_goalie(body) else 1.0
+	return 0.18 if _is_goalie(body) else 1.0
 
 func _is_goalie(body: Node3D) -> bool:
 	return body.name.to_lower().contains("goalie")
@@ -80,9 +88,14 @@ func _apply_velocity_bump(body: Node3D, direction: Vector3, overlap: float) -> v
 		velocity += direction * min(overlap * velocity_impulse, velocity_impulse)
 		body.set("_move_velocity", velocity)
 		return
-
 	var raw_lateral: Variant = body.get("_lateral_velocity")
 	if raw_lateral is float:
 		var lateral: float = float(raw_lateral)
 		lateral += direction.z * min(overlap * velocity_impulse, velocity_impulse)
 		body.set("_lateral_velocity", lateral)
+
+func _apply_soft_check(body: Node3D, direction: Vector3, overlap: float) -> void:
+	if not body.has_method("receive_check"):
+		return
+	var force: float = min(hard_overlap_hit_force + overlap * 5.0, 13.0)
+	body.call("receive_check", direction.normalized(), force, direction * force * 0.18, {})
