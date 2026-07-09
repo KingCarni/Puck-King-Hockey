@@ -3,8 +3,8 @@ extends Node3D
 const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprite_visuals.gd")
 
 const PUCK_TEXTURE_PATH: String = "res://assets/art/puck/pkh_puck_topdown.svg"
-const RINK_HALF_LENGTH: float = 19.25
-const RINK_HALF_WIDTH: float = 9.25
+const RINK_HALF_LENGTH: float = 22.0
+const RINK_HALF_WIDTH: float = 10.8
 const PUCK_Y: float = 0.18
 
 @export var pickup_radius: float = 1.05
