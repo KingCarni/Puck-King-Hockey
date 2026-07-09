@@ -6,6 +6,7 @@ const PUCK_TEXTURE_PATH: String = "res://assets/art/puck/pkh_puck_topdown.svg"
 const RINK_HALF_LENGTH: float = 24.2
 const RINK_HALF_WIDTH: float = 11.6
 const PUCK_Y: float = 0.18
+const MIN_RELEASE_SPEED: float = 8.5
 
 @export var pickup_radius: float = 1.05
 @export var carry_distance: float = 1.05
@@ -134,15 +135,18 @@ func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0,
 		_last_toucher = _owner
 	var normalized_direction: Vector3 = shot_direction.normalized()
 	var clamped_power: float = clamp(shot_power, 0.0, 1.0)
-	var shot_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power) * maxf(speed_scale, 0.1)
+	var base_speed: float = lerp(wrist_shot_speed, slap_shot_speed, clamped_power) * maxf(speed_scale, 0.1)
 	var owner_influence: Vector3 = Vector3(owner_velocity.x, 0.0, owner_velocity.z) * owner_velocity_inheritance
+	var release_velocity: Vector3 = normalized_direction * base_speed + owner_influence
+	var forward_speed: float = release_velocity.dot(normalized_direction)
+	if forward_speed < MIN_RELEASE_SPEED:
+		release_velocity += normalized_direction * (MIN_RELEASE_SPEED - forward_speed)
 	_previous_position = global_position
 	_is_possessed = false
 	_owner = null
-	_velocity = normalized_direction * shot_speed + owner_influence
-	_velocity = _velocity.limit_length(max_loose_speed)
+	_velocity = release_velocity.limit_length(max_loose_speed)
 	_rocket_hot_timer = rocket_hot_seconds if speed_scale > 1.05 else 0.0
-	global_position += normalized_direction * 0.52
+	global_position += normalized_direction * 0.72
 	global_position.y = PUCK_Y
 
 func poke_free(direction: Vector3, force: float) -> void:
