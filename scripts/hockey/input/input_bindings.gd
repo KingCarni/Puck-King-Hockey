@@ -3,12 +3,10 @@ extends RefCounted
 # Registers per-player InputMap actions at runtime so local multiplayer
 # needs no project.godot edits and stays configurable later.
 #
-# Player 1 keyboard: WASD, Space sprint, F / left mouse shoot, Q pass, E check.
-# Player 2 keyboard fallback: arrows, M sprint, / shoot, . pass, , check.
+# Player 1 keyboard: WASD, Space sprint, F / left mouse shoot, Q pass/call pass, E check.
+# Player 2 keyboard fallback: arrows, M sprint, / shoot, . pass/call pass, , check.
 #
-# Gamepad layout: left stick move, RT shoot, A sprint, B check, X pass.
-# Controller ownership can be toggled at runtime by the match scene:
-# F1 = controller drives P1, F2 = controller drives P2.
+# Gamepad layout: left stick move, RT shoot, LT pass/call pass, A sprint, B check, X pass fallback.
 
 const CONTROLLER_OWNER_P1: String = "p1"
 const CONTROLLER_OWNER_P2: String = "p2"
@@ -29,7 +27,6 @@ static func ensure_player_actions() -> void:
 	var primary_pad: int = pads[0] if pads.size() >= 1 else -1
 	var secondary_pad: int = pads[1] if pads.size() >= 2 else -1
 
-	# --- Player 1: keyboard, plus controller when selected. ---
 	_reset_action("p1_up")
 	_reset_action("p1_down")
 	_reset_action("p1_left")
@@ -52,7 +49,6 @@ static func ensure_player_actions() -> void:
 	elif secondary_pad >= 0:
 		_add_pad_bindings("p1", secondary_pad)
 
-	# --- Player 2: keyboard fallback, plus controller when selected. ---
 	_reset_action("p2_up")
 	_reset_action("p2_down")
 	_reset_action("p2_left")
@@ -78,6 +74,7 @@ static func _add_pad_bindings(prefix: String, device: int) -> void:
 	_add_pad_axis(prefix + "_left", device, JOY_AXIS_LEFT_X, -1.0)
 	_add_pad_axis(prefix + "_right", device, JOY_AXIS_LEFT_X, 1.0)
 	_add_pad_axis(prefix + "_shoot", device, JOY_AXIS_TRIGGER_RIGHT, 1.0)
+	_add_pad_axis(prefix + "_pass", device, JOY_AXIS_TRIGGER_LEFT, 1.0)
 	_add_pad_button(prefix + "_sprint", device, JOY_BUTTON_A)
 	_add_pad_button(prefix + "_check", device, JOY_BUTTON_B)
 	_add_pad_button(prefix + "_pass", device, JOY_BUTTON_X)
