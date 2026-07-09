@@ -47,9 +47,11 @@ var _check_cooldown_timer: float = 0.0
 var _check_active_timer: float = 0.0
 var _knockdown_timer: float = 0.0
 var _has_hit_during_check: bool = false
+var _is_frozen: bool = false
 var hits_delivered: int = 0
 var _body_material: StandardMaterial3D = null
 var _checking_material: StandardMaterial3D = null
+var _frozen_material: StandardMaterial3D = null
 
 @onready var _visual_root: Node3D = $VisualRoot
 @onready var _body_mesh: MeshInstance3D = $VisualRoot/BodyMesh
@@ -68,7 +70,6 @@ func _ready() -> void:
 	_build_charge_meter()
 	_puck = get_node_or_null(puck_path)
 
-# Allows AI/network sources to drive this body later.
 func set_input_source(source: RefCounted) -> void:
 	if source != null:
 		_input_source = source
@@ -76,7 +77,7 @@ func set_input_source(source: RefCounted) -> void:
 func _physics_process(delta: float) -> void:
 	_update_check_timers(delta)
 
-	# Knocked down: no control until the skater picks themselves up.
+	# Knocked down/frozen: no control until the skater picks themselves up.
 	if _knockdown_timer > 0.0:
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, ice_friction * 1.6 * delta)
 		velocity = Vector3(_move_velocity.x, 0.0, _move_velocity.z)
@@ -84,6 +85,7 @@ func _physics_process(delta: float) -> void:
 		_move_velocity = Vector3(velocity.x, 0.0, velocity.z)
 		_apply_rink_bounds()
 		_update_puck_interaction(delta)
+		_update_check_visuals()
 		return
 
 	_handle_check_input()
@@ -114,7 +116,6 @@ func _get_input_direction() -> Vector3:
 	var input_vector: Vector2 = _input_source.get_move_vector()
 	if input_vector.length_squared() <= 0.0:
 		return Vector3.ZERO
-
 	var direction: Vector3 = Vector3(input_vector.x, 0.0, input_vector.y)
 	return direction.normalized()
 
@@ -123,11 +124,9 @@ func _apply_rink_bounds() -> void:
 	var clamped_z: float = clamp(global_position.z, -RINK_HALF_WIDTH, RINK_HALF_WIDTH)
 	var hit_horizontal_board: bool = not is_equal_approx(clamped_x, global_position.x)
 	var hit_vertical_board: bool = not is_equal_approx(clamped_z, global_position.z)
-
 	if hit_horizontal_board:
 		global_position.x = clamped_x
 		_move_velocity.x = -_move_velocity.x * board_bounce
-
 	if hit_vertical_board:
 		global_position.z = clamped_z
 		_move_velocity.z = -_move_velocity.z * board_bounce
@@ -136,7 +135,6 @@ func _rotate_visuals(delta: float) -> void:
 	var facing_direction: Vector3 = _get_facing_direction()
 	if facing_direction.length_squared() <= 0.0:
 		return
-
 	var target_yaw: float = atan2(facing_direction.x, facing_direction.z)
 	_visual_root.rotation.y = lerp_angle(_visual_root.rotation.y, target_yaw, turn_speed * delta)
 
@@ -144,14 +142,14 @@ func _update_check_timers(delta: float) -> void:
 	_check_cooldown_timer = max(_check_cooldown_timer - delta, 0.0)
 	_check_active_timer = max(_check_active_timer - delta, 0.0)
 	_knockdown_timer = max(_knockdown_timer - delta, 0.0)
+	if _knockdown_timer <= 0.0:
+		_is_frozen = false
 
 func _handle_check_input() -> void:
 	if not _input_source.is_check_just_pressed():
 		return
-
 	if _check_cooldown_timer > 0.0:
 		return
-
 	var facing_direction: Vector3 = _get_facing_direction()
 	_move_velocity += facing_direction * check_lunge_speed
 	_move_velocity = _move_velocity.limit_length(sprint_max_speed + check_lunge_speed * 0.55)
@@ -162,35 +160,27 @@ func _handle_check_input() -> void:
 func _update_check_collision() -> void:
 	if _check_active_timer <= 0.0 or _has_hit_during_check:
 		return
-
 	var facing_direction: Vector3 = _get_facing_direction()
 	var checkable_nodes: Array[Node] = get_tree().get_nodes_in_group("checkable")
-
 	for checkable_node: Node in checkable_nodes:
 		var target: Node3D = checkable_node as Node3D
 		if target == null or target == self:
 			continue
-
 		var flat_delta: Vector3 = Vector3(target.global_position.x - global_position.x, 0.0, target.global_position.z - global_position.z)
 		var distance: float = flat_delta.length()
 		if distance > check_hit_radius or distance <= 0.001:
 			continue
-
 		var target_direction: Vector3 = flat_delta.normalized()
 		var forward_dot: float = facing_direction.dot(target_direction)
 		if forward_dot < check_forward_dot:
 			continue
-
 		var effects: Dictionary = {}
 		if check_freeze_seconds > 0.0:
 			effects["freeze"] = check_freeze_seconds
-
 		if target.has_method("receive_check"):
 			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity, effects)
-
 		if _puck != null and _puck.has_method("poke_free") and _check_should_pop_puck(target):
 			_puck.call("poke_free", facing_direction + target_direction * 0.35, check_puck_force)
-
 		hits_delivered += 1
 		_has_hit_during_check = true
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
@@ -205,7 +195,6 @@ func _check_should_pop_puck(target: Node3D) -> bool:
 		return false
 	return bool(_puck.call("is_possessed_by", target)) or bool(_puck.call("is_possessed_by", self))
 
-# NHL Hitz-style impact freeze: a few real-time milliseconds of slow-mo.
 func _trigger_hit_stop() -> void:
 	if Engine.time_scale < 1.0:
 		return
@@ -220,13 +209,12 @@ func receive_check(direction: Vector3, force: float, checker_velocity: Vector3, 
 	var inherited_velocity: Vector3 = Vector3(checker_velocity.x, 0.0, checker_velocity.z) * 0.22
 	_move_velocity = hit_direction.normalized() * force + inherited_velocity
 	_cancel_shot_charge()
-
 	var freeze_seconds: float = float(effects.get("freeze", 0.0))
 	var near_boards: bool = absf(global_position.z) > RINK_HALF_WIDTH - 1.3 or absf(global_position.x) > RINK_HALF_LENGTH - 1.3
 	if freeze_seconds > 0.0:
 		_knockdown_timer = freeze_seconds
+		_is_frozen = true
 	elif force > 15.0 or near_boards:
-		# Huge hit (or pinned into the boards): spin out.
 		_knockdown_timer = 0.8 if force > 15.0 else 0.55
 		_start_knockdown_spin()
 
@@ -239,8 +227,9 @@ func _start_knockdown_spin() -> void:
 func _update_check_visuals() -> void:
 	if _body_material == null or _checking_material == null:
 		return
-
-	if _check_active_timer > 0.0:
+	if _is_frozen and _frozen_material != null:
+		_body_mesh.material_override = _frozen_material
+	elif _check_active_timer > 0.0:
 		_body_mesh.material_override = _checking_material
 	else:
 		_body_mesh.material_override = _body_material
@@ -249,10 +238,8 @@ func _update_puck_interaction(delta: float) -> void:
 	if _puck == null:
 		_update_charge_meter(0.0, false)
 		return
-
 	if _puck.has_method("can_be_picked_up_by") and _puck.call("can_be_picked_up_by", self):
 		_puck.call("take_possession", self)
-
 	if _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", self)):
 		if _try_pass():
 			return
@@ -270,7 +257,6 @@ func _try_pass() -> bool:
 	var teammate: Node3D = get_node_or_null(teammate_path) as Node3D
 	if teammate == null:
 		return false
-
 	var teammate_velocity: Vector3 = Vector3.ZERO
 	var raw_velocity: Variant = teammate.get("_move_velocity")
 	if raw_velocity is Vector3:
@@ -279,7 +265,6 @@ func _try_pass() -> bool:
 	var pass_direction: Vector3 = Vector3(lead_target.x - global_position.x, 0.0, lead_target.z - global_position.z)
 	if pass_direction.length_squared() <= 0.001:
 		return false
-
 	_puck.call("shoot", pass_direction.normalized(), _move_velocity, pass_power)
 	_cancel_shot_charge()
 	return true
@@ -288,14 +273,11 @@ func _update_shot_charge(delta: float) -> void:
 	if _input_source.is_shoot_just_pressed():
 		_is_charging_shot = true
 		_shot_charge_time = 0.0
-
 	if _is_charging_shot and _input_source.is_shoot_pressed():
 		_shot_charge_time = min(_shot_charge_time + delta, slap_shot_charge_seconds)
-
 	if _is_charging_shot and _input_source.is_shoot_just_released():
 		_release_charged_shot()
 		return
-
 	var shot_power: float = _get_shot_power()
 	_update_charge_meter(shot_power, _is_charging_shot)
 
@@ -303,7 +285,6 @@ func _release_charged_shot() -> void:
 	if _puck == null:
 		_cancel_shot_charge()
 		return
-
 	var shot_power: float = max(_get_shot_power(), minimum_shot_power)
 	_puck.call("shoot", _get_facing_direction(), _move_velocity, shot_power, shot_speed_scale)
 	_cancel_shot_charge()
@@ -337,20 +318,23 @@ func _build_placeholder_visuals() -> void:
 		SkaterSpriteVisuals.apply_skater_sprite(_body_mesh, _direction_marker)
 		_body_material = SkaterSpriteVisuals.make_sprite_material(skater_texture)
 		_checking_material = SkaterSpriteVisuals.make_sprite_material(skater_texture, Color(1.55, 1.65, 2.10, 1.0))
+		_frozen_material = SkaterSpriteVisuals.make_sprite_material(skater_texture, Color(0.35, 1.45, 2.25, 1.0))
 		_body_mesh.material_override = _body_material
 		return
-
 	_body_material = StandardMaterial3D.new()
 	_body_material.albedo_color = Color(0.08, 0.34, 1.0, 1.0)
 	_body_material.roughness = 0.35
 	_body_mesh.material_override = _body_material
-
 	_checking_material = StandardMaterial3D.new()
 	_checking_material.albedo_color = Color(0.25, 0.75, 1.0, 1.0)
 	_checking_material.emission_enabled = true
 	_checking_material.emission = Color(0.1, 0.45, 1.0, 1.0)
 	_checking_material.emission_energy_multiplier = 0.45
-
+	_frozen_material = StandardMaterial3D.new()
+	_frozen_material.albedo_color = Color(0.35, 1.0, 1.0, 1.0)
+	_frozen_material.emission_enabled = true
+	_frozen_material.emission = Color(0.1, 0.8, 1.0, 1.0)
+	_frozen_material.emission_energy_multiplier = 0.9
 	var direction_material: StandardMaterial3D = StandardMaterial3D.new()
 	direction_material.albedo_color = Color(0.02, 0.025, 0.03, 1.0)
 	direction_material.roughness = 0.45
@@ -368,7 +352,6 @@ func _build_charge_meter() -> void:
 	back_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_charge_meter_back.material_override = back_material
 	_visual_root.add_child(_charge_meter_back)
-
 	_charge_meter_fill = MeshInstance3D.new()
 	_charge_meter_fill.name = "ShotChargeFill"
 	var fill_mesh: BoxMesh = BoxMesh.new()
@@ -383,22 +366,18 @@ func _build_charge_meter() -> void:
 	_charge_fill_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_charge_meter_fill.material_override = _charge_fill_material
 	_visual_root.add_child(_charge_meter_fill)
-
 	_update_charge_meter(0.0, false)
 
 func _update_charge_meter(power: float, is_visible: bool) -> void:
 	if _charge_meter_back == null or _charge_meter_fill == null:
 		return
-
 	_charge_meter_back.visible = is_visible
 	_charge_meter_fill.visible = is_visible
 	if not is_visible:
 		return
-
 	var clamped_power: float = clamp(power, 0.0, 1.0)
 	_charge_meter_fill.scale.x = max(clamped_power, 0.04)
 	_charge_meter_fill.position.x = -0.5 + clamped_power * 0.5
-
 	if clamped_power > 0.92:
 		_charge_fill_material.albedo_color = Color(1.0, 0.22, 0.12, 1.0)
 		_charge_fill_material.emission = Color(1.0, 0.05, 0.02, 1.0)
