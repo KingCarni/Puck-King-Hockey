@@ -166,7 +166,7 @@ goalie_texture_path = "res://assets/art/characters/pkh_goalie_away.svg"
 mesh = SubResource("CylinderMesh_player_body")
 
 [node name="Puck" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0.18, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
 script = ExtResource("3_puck_controller")
 
 [node name="PuckMesh" type="MeshInstance3D" parent="Puck"]
@@ -181,7 +181,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.4, 0.2, -1.9)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.4, 0.2, 1.9)
 
 [node name="PuckSpawn" type="Marker3D" parent="SpawnPoints"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0.15, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
 
 [node name="CameraRig" type="Node3D" parent="."]
 
