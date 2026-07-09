@@ -4,8 +4,8 @@ const SkaterSpriteVisuals: GDScript = preload("res://scripts/hockey/skater_sprit
 const InputBindings: GDScript = preload("res://scripts/hockey/input/input_bindings.gd")
 const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_input_source.gd")
 
-const RINK_HALF_LENGTH: float = 19.25
-const RINK_HALF_WIDTH: float = 9.25
+const RINK_HALF_LENGTH: float = 22.0
+const RINK_HALF_WIDTH: float = 10.8
 const HIT_STOP_TIME_SCALE: float = 0.05
 const HIT_STOP_SECONDS: float = 0.06
 
@@ -98,7 +98,6 @@ func _get_input_direction() -> Vector3:
 	if input_vector.length_squared() <= 0.0:
 		return Vector3.ZERO
 
-	# Screen-space controls mapped to rink-space movement.
 	var direction: Vector3 = Vector3(input_vector.x, 0.0, input_vector.y)
 	return direction.normalized()
 
@@ -167,13 +166,18 @@ func _update_check_collision() -> void:
 		if target.has_method("receive_check"):
 			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity)
 
-		if _puck != null and _puck.has_method("poke_free"):
+		if _puck != null and _puck.has_method("poke_free") and _check_should_pop_puck(target):
 			_puck.call("poke_free", facing_direction + target_direction * 0.35, check_puck_force)
 
 		_has_hit_during_check = true
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
 		_trigger_hit_stop()
 		return
+
+func _check_should_pop_puck(target: Node3D) -> bool:
+	if _puck == null or not _puck.has_method("is_possessed_by"):
+		return false
+	return bool(_puck.call("is_possessed_by", target)) or bool(_puck.call("is_possessed_by", self))
 
 # NHL Hitz-style impact freeze: a few real-time milliseconds of slow-mo.
 func _trigger_hit_stop() -> void:
