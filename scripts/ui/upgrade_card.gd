@@ -13,9 +13,10 @@ signal card_chosen(index: int, upgrade_id: String)
 @export var controller_label: String = "A"
 @export var icon_path: String = ""
 
-const HOVER_SCALE: Vector2 = Vector2(1.06, 1.06)
+const HOVER_SCALE: Vector2 = Vector2(1.05, 1.05)
 const REST_SCALE: Vector2 = Vector2(1.0, 1.0)
 const HOVER_TIME: float = 0.12
+const CARD_SIZE: Vector2 = Vector2(350.0, 500.0)
 
 var _palette: Node = null
 var _panel: PanelContainer = null
@@ -33,8 +34,9 @@ var _is_focused: bool = false
 
 func _ready() -> void:
 	_palette = get_node_or_null("/root/UiPalette")
-	custom_minimum_size = Vector2(420.0, 560.0)
-	pivot_offset = Vector2(210.0, 280.0)
+	custom_minimum_size = CARD_SIZE
+	size = CARD_SIZE
+	pivot_offset = CARD_SIZE * 0.5
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_build_ui()
 	_refresh_text()
@@ -65,16 +67,16 @@ func _build_ui() -> void:
 	panel_style.set_corner_radius_all(14)
 	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.55)
 	panel_style.shadow_size = 14
-	panel_style.content_margin_left = 26
-	panel_style.content_margin_right = 26
-	panel_style.content_margin_top = 26
-	panel_style.content_margin_bottom = 26
+	panel_style.content_margin_left = 22
+	panel_style.content_margin_right = 22
+	panel_style.content_margin_top = 22
+	panel_style.content_margin_bottom = 22
 	_panel.add_theme_stylebox_override("panel", panel_style)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.name = "Content"
 	vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	vbox.add_theme_constant_override("separation", 20)
+	vbox.add_theme_constant_override("separation", 16)
 	_panel.add_child(vbox)
 
 	_ribbon = PanelContainer.new()
@@ -85,10 +87,10 @@ func _build_ui() -> void:
 	ribbon_style.border_color = Color(1.0, 0.92, 0.30, 1.0)
 	ribbon_style.set_border_width_all(3)
 	ribbon_style.set_corner_radius_all(6)
-	ribbon_style.content_margin_left = 22
-	ribbon_style.content_margin_right = 22
-	ribbon_style.content_margin_top = 8
-	ribbon_style.content_margin_bottom = 8
+	ribbon_style.content_margin_left = 18
+	ribbon_style.content_margin_right = 18
+	ribbon_style.content_margin_top = 7
+	ribbon_style.content_margin_bottom = 7
 	_ribbon.add_theme_stylebox_override("panel", ribbon_style)
 	vbox.add_child(_ribbon)
 
@@ -100,7 +102,7 @@ func _build_ui() -> void:
 
 	var icon_panel: PanelContainer = PanelContainer.new()
 	icon_panel.name = "IconArea"
-	icon_panel.custom_minimum_size = Vector2(0.0, 150.0)
+	icon_panel.custom_minimum_size = Vector2(0.0, 126.0)
 	icon_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var icon_style: StyleBoxFlat = StyleBoxFlat.new()
 	icon_style.bg_color = Color(0.12, 0.12, 0.14, 1.0)
@@ -145,10 +147,10 @@ func _build_ui() -> void:
 	pill_style.border_color = Color(1.0, 0.78, 0.10, 1.0)
 	pill_style.set_border_width_all(3)
 	pill_style.set_corner_radius_all(22)
-	pill_style.content_margin_left = 26
-	pill_style.content_margin_right = 26
-	pill_style.content_margin_top = 8
-	pill_style.content_margin_bottom = 8
+	pill_style.content_margin_left = 22
+	pill_style.content_margin_right = 22
+	pill_style.content_margin_top = 7
+	pill_style.content_margin_bottom = 7
 	_hotkey_pill.add_theme_stylebox_override("panel", pill_style)
 	vbox.add_child(_hotkey_pill)
 
@@ -158,78 +160,78 @@ func _build_ui() -> void:
 	_hotkey_pill.add_child(_hotkey_label_node)
 
 	_button = Button.new()
-	_button.name = "ClickArea"
-	_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_button.flat = true
+	_button.name = "ChooseButton"
+	_button.text = "CHOOSE"
 	_button.focus_mode = Control.FOCUS_ALL
-	_button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	_button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
-	_button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
-	_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	_button.pressed.connect(_on_pressed)
-	_button.mouse_entered.connect(_on_hover_start)
-	_button.mouse_exited.connect(_on_hover_end)
-	_button.focus_entered.connect(_on_hover_start)
-	_button.focus_exited.connect(_on_hover_end)
-	add_child(_button)
+	_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(_button)
+	_button.pressed.connect(_on_choose_pressed)
+	_button.focus_entered.connect(_on_focus_entered)
+	_button.focus_exited.connect(_on_focus_exited)
+	button_down.connect(_on_focus_entered)
+	button_up.connect(_on_focus_exited)
 
 	if _palette != null:
-		_palette.style_accent_label(_ribbon_label, 28, _palette.COLOR_BONE)
-		_palette.style_display_label(_title_label, 40, _palette.COLOR_HOT_GOLD)
-		_palette.style_display_label(_description_label, 22, _palette.COLOR_BONE)
-		_palette.style_accent_label(_hotkey_label_node, 26, _palette.COLOR_GOLD)
-		_palette.style_display_label(_icon_glyph, 110, _palette.COLOR_GOLD)
+		_palette.style_accent_label(_ribbon_label, 20, _palette.COLOR_BONE)
+		_palette.style_display_label(_icon_glyph, 72, _palette.COLOR_GOLD)
+		_palette.style_display_label(_title_label, 30, _palette.COLOR_BONE)
+		_palette.style_accent_label(_description_label, 18, _palette.COLOR_STEEL)
+		_palette.style_accent_label(_hotkey_label_node, 20, _palette.COLOR_GOLD)
+		_palette.style_button(_button, Color(0.85, 0.10, 0.13, 1.0), _palette.COLOR_GOLD, _palette.COLOR_BONE, 22)
 
 func _refresh_text() -> void:
-	if _ribbon_label != null:
-		_ribbon_label.text = "PICK %d" % (card_index + 1)
 	if _title_label != null:
-		_title_label.text = card_title.to_upper()
+		_title_label.text = card_title
 	if _description_label != null:
 		_description_label.text = card_description
 	if _hotkey_label_node != null:
 		_hotkey_label_node.text = "%s / %s" % [hotkey_label, controller_label]
-	_refresh_icon()
-
-func _refresh_icon() -> void:
-	if _icon_rect == null or _icon_glyph == null:
-		return
-	var icon_texture: Texture2D = null
-	if icon_path != "" and ResourceLoader.exists(icon_path):
-		icon_texture = load(icon_path) as Texture2D
-	_icon_rect.texture = icon_texture
-	_icon_rect.visible = icon_texture != null
-	_icon_glyph.visible = icon_texture == null
+	if _icon_glyph != null:
+		_icon_glyph.text = _glyph_for_upgrade(upgrade_id)
+	if _icon_rect != null:
+		var texture: Texture2D = _load_icon_texture(icon_path)
+		_icon_rect.texture = texture
+		_icon_rect.visible = texture != null
+		_icon_glyph.visible = texture == null
 
 func grab_card_focus() -> void:
 	if _button != null:
 		_button.grab_focus()
 
-func _on_pressed() -> void:
+func _on_choose_pressed() -> void:
 	emit_signal("card_chosen", card_index, upgrade_id)
 
-func _on_hover_start() -> void:
+func _on_focus_entered() -> void:
+	if _is_focused:
+		return
 	_is_focused = true
 	_animate_scale(HOVER_SCALE)
-	_set_border_color(Color(1.0, 0.92, 0.30, 1.0), 7)
 
-func _on_hover_end() -> void:
+func _on_focus_exited() -> void:
+	if not _is_focused:
+		return
 	_is_focused = false
 	_animate_scale(REST_SCALE)
-	_set_border_color(Color(1.0, 0.78, 0.10, 1.0), 5)
 
-func _animate_scale(target_scale: Vector2) -> void:
+func _animate_scale(target: Vector2) -> void:
 	if _hover_tween != null and _hover_tween.is_valid():
 		_hover_tween.kill()
 	_hover_tween = create_tween()
-	_hover_tween.tween_property(self, "scale", target_scale, HOVER_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_hover_tween.tween_property(self, "scale", target, HOVER_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
-func _set_border_color(color: Color, width: int) -> void:
-	if _panel == null:
-		return
-	var style: StyleBoxFlat = _panel.get_theme_stylebox("panel") as StyleBoxFlat
-	if style == null:
-		return
-	style.border_color = color
-	style.set_border_width_all(width)
+func _load_icon_texture(path: String) -> Texture2D:
+	if path == "":
+		return null
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
+func _glyph_for_upgrade(id: String) -> String:
+	match id:
+		"rocket_skates": return "⚡"
+		"sticky_tape": return "✦"
+		"titanium_pads": return "⚔"
+		"rocket_shot": return "🔥"
+		"magnet_puck": return "🧲"
+		"freeze_blast": return "❄"
+	return "★"
