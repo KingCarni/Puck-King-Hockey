@@ -1,6 +1,6 @@
 [gd_scene load_steps=11 format=3 uid="uid://puckkingtestrink"]
 
-[ext_resource type="Script" path="res://scripts/hockey/test_rink_art_pass.gd" id="1_test_rink"]
+[ext_resource type="Script" path="res://scripts/hockey/test_rink_gameplay_pass.gd" id="1_test_rink"]
 [ext_resource type="Script" path="res://scripts/hockey/player_controller.gd" id="2_player_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/puck_controller.gd" id="3_puck_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/ai_opponent_controller.gd" id="4_ai_opponent"]
