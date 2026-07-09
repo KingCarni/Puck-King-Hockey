@@ -3,18 +3,33 @@ extends RefCounted
 # Registers per-player InputMap actions at runtime so local multiplayer
 # needs no project.godot edits and stays configurable later.
 #
-# Player 1: WASD, Space sprint, F / left mouse shoot, Q pass, E check.
-#           Gets the second gamepad if two are connected.
-# Player 2: first connected gamepad; keyboard fallback is always bound:
-#           arrows, M sprint, / shoot, . pass, , check.
+# Player 1 keyboard: WASD, Space sprint, F / left mouse shoot, Q pass, E check.
+# Player 2 keyboard fallback: arrows, M sprint, / shoot, . pass, , check.
 #
-# Gamepad layout (both players): left stick move, RT shoot, A sprint,
-# B check, X pass.
+# Gamepad layout: left stick move, RT shoot, A sprint, B check, X pass.
+# Controller ownership can be toggled at runtime by the match scene:
+# F1 = controller drives P1, F2 = controller drives P2.
+
+const CONTROLLER_OWNER_P1: String = "p1"
+const CONTROLLER_OWNER_P2: String = "p2"
+
+static var controller_owner: String = CONTROLLER_OWNER_P2
+
+static func set_controller_owner(owner: String) -> void:
+	if owner != CONTROLLER_OWNER_P1 and owner != CONTROLLER_OWNER_P2:
+		return
+	controller_owner = owner
+	ensure_player_actions()
+
+static func get_controller_owner() -> String:
+	return controller_owner
 
 static func ensure_player_actions() -> void:
 	var pads: Array[int] = Input.get_connected_joypads()
+	var primary_pad: int = pads[0] if pads.size() >= 1 else -1
+	var secondary_pad: int = pads[1] if pads.size() >= 2 else -1
 
-	# --- Player 1: keyboard (+ pad #2 when present) ---
+	# --- Player 1: keyboard, plus controller when selected. ---
 	_reset_action("p1_up")
 	_reset_action("p1_down")
 	_reset_action("p1_left")
@@ -32,10 +47,12 @@ static func ensure_player_actions() -> void:
 	_add_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
 	_add_key("p1_check", KEY_E)
 	_add_key("p1_pass", KEY_Q)
-	if pads.size() >= 2:
-		_add_pad_bindings("p1", pads[1])
+	if primary_pad >= 0 and controller_owner == CONTROLLER_OWNER_P1:
+		_add_pad_bindings("p1", primary_pad)
+	elif secondary_pad >= 0:
+		_add_pad_bindings("p1", secondary_pad)
 
-	# --- Player 2: first gamepad, keyboard arrows as fallback ---
+	# --- Player 2: keyboard fallback, plus controller when selected. ---
 	_reset_action("p2_up")
 	_reset_action("p2_down")
 	_reset_action("p2_left")
@@ -52,8 +69,8 @@ static func ensure_player_actions() -> void:
 	_add_key("p2_shoot", KEY_SLASH)
 	_add_key("p2_pass", KEY_PERIOD)
 	_add_key("p2_check", KEY_COMMA)
-	if pads.size() >= 1:
-		_add_pad_bindings("p2", pads[0])
+	if primary_pad >= 0 and controller_owner == CONTROLLER_OWNER_P2:
+		_add_pad_bindings("p2", primary_pad)
 
 static func _add_pad_bindings(prefix: String, device: int) -> void:
 	_add_pad_axis(prefix + "_up", device, JOY_AXIS_LEFT_Y, -1.0)
