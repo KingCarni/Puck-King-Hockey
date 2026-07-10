@@ -57,18 +57,18 @@ func _try_call_for_pass() -> bool:
 
 func _get_teammate_carriers() -> Array[Node3D]:
 	var result: Array[Node3D] = []
-	var names: Array[String] = []
 	if input_prefix == "p1":
-		names.append("HomeTeammate")
-		names.append("HomeTeammate2")
+		_append_teammate(result, "../HomeTeammate")
+		_append_teammate(result, "../HomeTeammate2")
 	else:
-		names.append("AwayTeammate")
-		names.append("AwayTeammate2")
-	for node_name: String in names:
-		var teammate: Node3D = get_node_or_null("../" + node_name) as Node3D
-		if teammate != null:
-			result.append(teammate)
+		_append_teammate(result, "../AwayTeammate")
+		_append_teammate(result, "../AwayTeammate2")
 	return result
+
+func _append_teammate(result: Array[Node3D], path: String) -> void:
+	var teammate: Node3D = get_node_or_null(path) as Node3D
+	if teammate != null:
+		result.append(teammate)
 
 func _force_pass_from(carrier: Node3D) -> void:
 	var carrier_velocity: Vector3 = Vector3.ZERO
