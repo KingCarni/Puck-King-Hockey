@@ -1,5 +1,6 @@
 extends "res://scripts/hockey/player_controller.gd"
 
+const AiCenterInputSource: GDScript = preload("res://scripts/hockey/input/ai_center_input_source.gd")
 const EXPANDED_RINK_HALF_LENGTH: float = 24.2
 const EXPANDED_RINK_HALF_WIDTH: float = 11.6
 
@@ -12,6 +13,10 @@ func set_human_control(source: RefCounted, manager: Node) -> void:
 
 func set_ai_control() -> void:
 	_team_play_manager = null
+	var ai: RefCounted = AiCenterInputSource.new()
+	var direction: float = 1.0 if input_prefix == "p1" else -1.0
+	ai.call("setup", self, _puck, direction)
+	set_input_source(ai)
 
 func _apply_rink_bounds() -> void:
 	var clamped_x: float = clamp(global_position.x, -EXPANDED_RINK_HALF_LENGTH, EXPANDED_RINK_HALF_LENGTH)
@@ -29,7 +34,6 @@ func _update_puck_interaction(delta: float) -> void:
 	if _puck == null:
 		_update_charge_meter(0.0, false)
 		return
-
 	var owns_puck: bool = _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", self))
 	if _team_play_manager != null:
 		var prefix: String = input_prefix
@@ -43,10 +47,8 @@ func _update_puck_interaction(delta: float) -> void:
 			else:
 				_team_play_manager.call("request_pass", self)
 			_pass_charge = 0.0
-
 	if _puck.has_method("can_be_picked_up_by") and _puck.call("can_be_picked_up_by", self):
 		_puck.call("take_possession", self)
-
 	if _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", self)):
 		_update_shot_charge(delta)
 		var carry_target: Vector3 = _get_puck_carry_position()
