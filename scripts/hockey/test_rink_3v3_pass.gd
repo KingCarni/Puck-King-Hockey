@@ -1,9 +1,6 @@
 extends "res://scripts/hockey/test_rink_gameplay_pass.gd"
 
-# 3v3 chaos pass:
-# - includes second winger per team in collision/reset/stat systems
-# - widens playable space and legal goal checks
-# - preserves front-mouth-only scoring so behind-net play cannot cheese goals
+const TeamPlayManagerScript: GDScript = preload("res://scripts/hockey/team_play_manager.gd")
 
 const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3(1.25, 1.0, 1.20)
 const THREE_V_THREE_HOME_GOAL_X: float = 22.65
@@ -13,6 +10,8 @@ const THREE_V_THREE_MIN_GOAL_SPEED: float = 3.0
 
 var _home_winger2: Node3D = null
 var _away_winger2: Node3D = null
+var _team_play_manager: Node = null
+var _team_indicators: Node = null
 
 func _ready() -> void:
 	super._ready()
@@ -21,6 +20,29 @@ func _ready() -> void:
 	world.scale = THREE_V_THREE_RINK_SCALE
 	if _collision_manager != null:
 		_collision_manager.call("setup", _get_collision_bodies())
+	_setup_team_play()
+
+func _setup_team_play() -> void:
+	_team_play_manager = Node.new()
+	_team_play_manager.name = "TeamPlayManager"
+	_team_play_manager.set_script(TeamPlayManagerScript)
+	add_child(_team_play_manager)
+	var home: Array[Node3D] = [_player, _home_teammate, _home_winger2]
+	var away: Array[Node3D] = [_away_skater, _away_teammate, _away_winger2]
+	_team_play_manager.call("setup", _puck, home, away, _control_side)
+	_team_indicators = get_node_or_null("PossessionIndicators")
+	if _team_indicators != null:
+		_team_play_manager.connect("controlled_player_changed", Callable(_team_indicators, "set_controlled_player"))
+		_team_play_manager.connect("pass_target_changed", Callable(_team_indicators, "set_pass_target"))
+		_team_play_manager.connect("call_acknowledged", Callable(_team_indicators, "acknowledge_call"))
+		var controlled: Variant = _team_play_manager.get("controlled_player")
+		if controlled is Node3D:
+			_team_indicators.call("set_controlled_player", controlled)
+
+func _apply_control_side(side: String, announce: bool) -> void:
+	super._apply_control_side(side, announce)
+	if _team_play_manager != null:
+		_team_play_manager.call("set_control_side", side)
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -105,6 +127,8 @@ func _set_match_enabled(is_enabled: bool) -> void:
 		_home_winger2.process_mode = mode
 	if _away_winger2 != null:
 		_away_winger2.process_mode = mode
+	if _team_play_manager != null:
+		_team_play_manager.process_mode = mode
 
 func _compute_three_stars() -> Array:
 	var candidates: Array = []
@@ -133,8 +157,10 @@ func _compute_three_stars() -> Array:
 
 func _display_name(node: Node3D) -> String:
 	match node.name:
-		&"HomeTeammate2": return "HOME WINGER 2"
-		&"AwayTeammate2": return "AWAY WINGER 2"
+		&"HomeTeammate2": return "HOME RIGHT WING"
+		&"AwayTeammate2": return "AWAY RIGHT WING"
+		&"HomeTeammate": return "HOME LEFT WING"
+		&"AwayTeammate": return "AWAY LEFT WING"
 	return super._display_name(node)
 
 func _credit_goal_scorer(team: String) -> void:
