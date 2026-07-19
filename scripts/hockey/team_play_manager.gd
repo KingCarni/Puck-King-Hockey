@@ -26,12 +26,15 @@ func setup(puck_node: Node, home: Array[Node3D], away: Array[Node3D], side: Stri
 	home_players = home
 	away_players = away
 	set_control_side(side)
-	if puck != null and puck.has_signal("possession_changed"):
-		puck.connect("possession_changed", Callable(self, "_on_possession_changed"))
 
 func _process(delta: float) -> void:
 	_switch_timer = maxf(_switch_timer - delta, 0.0)
 	_call_timer = maxf(_call_timer - delta, 0.0)
+	var owner: Node3D = _get_puck_owner()
+	if owner != _last_owner:
+		_last_owner = owner
+		if owner != null and owner in _controlled_team():
+			_set_controlled_player(owner)
 	if controlled_player == null:
 		return
 	var prefix: String = "p1" if control_side == "HOME" else "p2"
@@ -42,10 +45,10 @@ func _process(delta: float) -> void:
 
 func set_control_side(side: String) -> void:
 	control_side = side
+	controlled_player = null
 	var team: Array[Node3D] = _controlled_team()
-	if team.is_empty():
-		return
-	_set_controlled_player(team[0])
+	if not team.is_empty():
+		_set_controlled_player(team[0])
 
 func switch_to_closest_to_puck() -> void:
 	var team: Array[Node3D] = _controlled_team()
@@ -66,7 +69,7 @@ func switch_to_closest_to_puck() -> void:
 func request_pass(requester: Node3D) -> bool:
 	if _call_timer > 0.0 or puck == null:
 		return false
-	var owner: Node3D = puck.call("get_owner") as Node3D if puck.has_method("get_owner") else null
+	var owner: Node3D = _get_puck_owner()
 	if owner == null or owner == requester or not owner in _controlled_team():
 		return false
 	if not _lane_clear(owner.global_position, requester.global_position):
@@ -80,8 +83,6 @@ func request_pass(requester: Node3D) -> bool:
 	direction.y = 0.0
 	if direction.length_squared() < 0.01:
 		return false
-	if puck.has_method("set_receiver_priority"):
-		puck.call("set_receiver_priority", requester, owner, 0.42)
 	puck.call("shoot", direction.normalized(), Vector3.ZERO, 0.38)
 	_call_timer = call_cooldown
 	emit_signal("call_acknowledged", owner)
@@ -106,7 +107,7 @@ func choose_pass_target(from_player: Node3D, aim: Vector3) -> Node3D:
 	return best
 
 func execute_pass(from_player: Node3D, aim: Vector3, charge: float) -> bool:
-	if puck == null or not puck.call("is_possessed_by", from_player):
+	if puck == null or not bool(puck.call("is_possessed_by", from_player)):
 		return false
 	var target: Node3D = choose_pass_target(from_player, aim)
 	if target == null:
@@ -118,8 +119,6 @@ func execute_pass(from_player: Node3D, aim: Vector3, charge: float) -> bool:
 	var lead: Vector3 = target.global_position + target_velocity * lerpf(0.18, 0.42, clampf(charge, 0.0, 1.0))
 	var direction: Vector3 = lead - from_player.global_position
 	direction.y = 0.0
-	if puck.has_method("set_receiver_priority"):
-		puck.call("set_receiver_priority", target, from_player, 0.48)
 	puck.call("shoot", direction.normalized(), Vector3.ZERO, lerpf(0.22, 0.58, clampf(charge, 0.0, 1.0)))
 	return true
 
@@ -146,11 +145,6 @@ func _set_controlled_player(player: Node3D) -> void:
 	controlled_player = player
 	emit_signal("controlled_player_changed", controlled_player)
 
-func _on_possession_changed(owner: Node3D) -> void:
-	_last_owner = owner
-	if owner != null and owner in _controlled_team():
-		_set_controlled_player(owner)
-
 func _update_pass_target(prefix: String) -> void:
 	var new_target: Node3D = null
 	if Input.is_action_pressed(prefix + "_pass") and controlled_player != null:
@@ -161,11 +155,24 @@ func _update_pass_target(prefix: String) -> void:
 		pass_target = new_target
 		emit_signal("pass_target_changed", pass_target)
 
+func _get_puck_owner() -> Node3D:
+	if puck == null:
+		return null
+	var possessed: Variant = puck.get("_is_possessed")
+	if not (possessed is bool) or not bool(possessed):
+		return null
+	var owner: Variant = puck.get("_owner")
+	return owner as Node3D if owner is Node3D else null
+
 func _controlled_team() -> Array[Node3D]:
-	return home_players if control_side == "HOME" else away_players
+	if control_side == "HOME":
+		return home_players
+	return away_players
 
 func _opponents() -> Array[Node3D]:
-	return away_players if control_side == "HOME" else home_players
+	if control_side == "HOME":
+		return away_players
+	return home_players
 
 func _lane_clear(from_position: Vector3, to_position: Vector3) -> bool:
 	for opponent: Node3D in _opponents():
