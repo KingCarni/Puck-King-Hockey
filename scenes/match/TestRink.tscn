@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/hockey/player_controller_3v3.gd" id="2_player_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/puck_controller.gd" id="3_puck_controller"]
 [ext_resource type="Script" path="res://scripts/hockey/goalie_controller.gd" id="6_goalie"]
-[ext_resource type="Script" path="res://scripts/hockey/winger_controller.gd" id="7_winger"]
+[ext_resource type="Script" path="res://scripts/hockey/team_play_winger.gd" id="7_winger"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_player_body"]
 top_radius = 0.48
@@ -49,7 +49,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
 mesh = SubResource("BoxMesh_direction_marker")
 
 [node name="HomeTeammate" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.2, 0.72, 3.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.2, 0.72, -3.7)
 script = ExtResource("7_winger")
 attack_direction = 1.0
 ally_center_path = NodePath("../Player")
@@ -57,6 +57,8 @@ enemy_center_path = NodePath("../Player2")
 enemy_winger_path = NodePath("../AwayTeammate")
 enemy_goalie_path = NodePath("../AwayGoalie")
 skater_texture_path = "res://assets/art/characters/pkh_skater_home_alt.svg"
+wing_role = "LEFT"
+same_team_winger_path = NodePath("../HomeTeammate2")
 
 [node name="VisualRoot" type="Node3D" parent="HomeTeammate"]
 
@@ -68,7 +70,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.62)
 mesh = SubResource("BoxMesh_direction_marker")
 
 [node name="HomeTeammate2" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.0, 0.72, -4.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.0, 0.72, 4.8)
 script = ExtResource("7_winger")
 attack_direction = 1.0
 ally_center_path = NodePath("../Player")
@@ -76,6 +78,8 @@ enemy_center_path = NodePath("../Player2")
 enemy_winger_path = NodePath("../AwayTeammate2")
 enemy_goalie_path = NodePath("../AwayGoalie")
 skater_texture_path = "res://assets/art/characters/pkh_skater_home_alt.svg"
+wing_role = "RIGHT"
+same_team_winger_path = NodePath("../HomeTeammate")
 
 [node name="VisualRoot" type="Node3D" parent="HomeTeammate2"]
 
@@ -114,6 +118,8 @@ enemy_center_path = NodePath("../Player")
 enemy_winger_path = NodePath("../HomeTeammate")
 enemy_goalie_path = NodePath("../HomeGoalie")
 skater_texture_path = "res://assets/art/characters/pkh_skater_away_alt.svg"
+wing_role = "LEFT"
+same_team_winger_path = NodePath("../AwayTeammate2")
 
 [node name="VisualRoot" type="Node3D" parent="AwayTeammate"]
 
@@ -133,6 +139,8 @@ enemy_center_path = NodePath("../Player")
 enemy_winger_path = NodePath("../HomeTeammate2")
 enemy_goalie_path = NodePath("../HomeGoalie")
 skater_texture_path = "res://assets/art/characters/pkh_skater_away_alt.svg"
+wing_role = "RIGHT"
+same_team_winger_path = NodePath("../AwayTeammate")
 
 [node name="VisualRoot" type="Node3D" parent="AwayTeammate2"]
 
