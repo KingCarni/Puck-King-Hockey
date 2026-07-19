@@ -21,7 +21,9 @@ func _physics_process(delta: float) -> void:
 
 func get_owner() -> Node3D:
 	var owner: Variant = get("_owner")
-	return owner as Node3D if owner is Node3D else null
+	if owner is Node3D:
+		return owner as Node3D
+	return null
 
 func set_receiver_priority(receiver: Node3D, passer: Node3D, duration: float = 0.42) -> void:
 	_priority_receiver = receiver
@@ -83,9 +85,10 @@ func _best_pickup_candidate() -> Node3D:
 		var score: float = distance
 		var raw_facing: Variant = candidate.get("_last_facing_direction")
 		if raw_facing is Vector3:
+			var facing: Vector3 = raw_facing
 			var to_puck: Vector3 = Vector3(global_position.x - candidate.global_position.x, 0.0, global_position.z - candidate.global_position.z)
 			if to_puck.length_squared() > 0.001:
-				score -= maxf(0.0, (raw_facing as Vector3).normalized().dot(to_puck.normalized())) * facing_bonus
+				score -= maxf(0.0, facing.normalized().dot(to_puck.normalized())) * facing_bonus
 		if score < best_score:
 			best_score = score
 			best = candidate
