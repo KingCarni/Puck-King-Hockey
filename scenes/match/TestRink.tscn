@@ -1,10 +1,10 @@
 [gd_scene load_steps=12 format=3 uid="uid://puckkingtestrink"]
 
-[ext_resource type="Script" path="res://scripts/hockey/test_rink_3v3_pass.gd" id="1_test_rink"]
-[ext_resource type="Script" path="res://scripts/hockey/player_controller_3v3.gd" id="2_player_controller"]
-[ext_resource type="Script" path="res://scripts/hockey/team_play_puck.gd" id="3_puck_controller"]
-[ext_resource type="Script" path="res://scripts/hockey/goalie_controller.gd" id="6_goalie"]
-[ext_resource type="Script" path="res://scripts/hockey/team_play_winger.gd" id="7_winger"]
+[ext_resource type="Script" path="res://scripts/hockey/test_rink_net_play_pass.gd" id="1_test_rink"]
+[ext_resource type="Script" path="res://scripts/hockey/net_play_player.gd" id="2_player_controller"]
+[ext_resource type="Script" path="res://scripts/hockey/net_play_puck.gd" id="3_puck_controller"]
+[ext_resource type="Script" path="res://scripts/hockey/net_play_goalie.gd" id="6_goalie"]
+[ext_resource type="Script" path="res://scripts/hockey/net_play_winger.gd" id="7_winger"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_player_body"]
 top_radius = 0.48
