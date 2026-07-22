@@ -7,14 +7,24 @@ var _last_probe_position: Vector3 = Vector3.ZERO
 func _ready() -> void:
 	super._ready()
 	world.scale = Vector3.ONE
+	_configure_goalies_from_spec()
 	_build_geometry_overlay()
 	_last_probe_position = _puck.global_position if _puck != null else Vector3.ZERO
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 39.5
-	camera.global_position = Vector3(0.0, 34.0, 31.0)
-	camera.look_at(Vector3.ZERO, Vector3.UP)
+	camera.size = RinkGeometry.CAMERA_ORTHO_SIZE
+	camera.global_position = RinkGeometry.CAMERA_POSITION
+	camera.look_at(RinkGeometry.CAMERA_LOOK_TARGET, Vector3.UP)
+
+func _configure_goalies_from_spec() -> void:
+	for goalie: Node3D in [_home_goalie, _away_goalie]:
+		if goalie == null:
+			continue
+		goalie.set("guard_distance_from_center", RinkGeometry.GOALIE_GUARD_X)
+		goalie.set("crease_half_width", RinkGeometry.GOALIE_CREASE_HALF_WIDTH)
+		if goalie.has_method("reset_to_center"):
+			goalie.call("reset_to_center")
 
 func _check_goal_state() -> void:
 	if _puck == null or _goal_lockout:
@@ -35,6 +45,29 @@ func _check_goal_state() -> void:
 		_register_goal(scoring_team)
 	_last_probe_position = current
 
+func _reset_faceoff(clear_puck: bool) -> void:
+	super._reset_faceoff(clear_puck)
+	_reset_actor(_player, RinkGeometry.HOME_CENTER_START, Vector3.RIGHT)
+	_reset_actor(_away_skater, RinkGeometry.AWAY_CENTER_START, Vector3.LEFT)
+	_reset_actor(_home_teammate, RinkGeometry.HOME_LEFT_WING_START, Vector3.RIGHT)
+	_reset_actor(_home_winger2, RinkGeometry.HOME_RIGHT_WING_START, Vector3.RIGHT)
+	_reset_actor(_away_teammate, RinkGeometry.AWAY_LEFT_WING_START, Vector3.LEFT)
+	_reset_actor(_away_winger2, RinkGeometry.AWAY_RIGHT_WING_START, Vector3.LEFT)
+	if clear_puck and _puck != null:
+		_puck.global_position = RinkGeometry.CENTER_SPAWN
+	_configure_goalies_from_spec()
+
+func _reset_actor(actor: Node3D, position: Vector3, facing: Vector3) -> void:
+	if actor == null:
+		return
+	actor.global_position = position
+	actor.set("_move_velocity", Vector3.ZERO)
+	actor.set("_last_facing_direction", facing)
+	actor.set("_stun_timer", 0.0)
+	actor.set("_shoot_cooldown_timer", 0.0)
+
+# Debug alignment geometry remains available for verification. The ice2 visual
+# pass hides it during normal play.
 func _build_geometry_overlay() -> void:
 	var overlay: Node3D = Node3D.new()
 	overlay.name = "NetPlayGeometry"
