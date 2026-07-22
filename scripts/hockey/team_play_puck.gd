@@ -19,10 +19,10 @@ func _physics_process(delta: float) -> void:
 		_priority_receiver = null
 	super._physics_process(delta)
 
-func get_owner() -> Node3D:
-	var owner: Variant = get("_owner")
-	if owner is Node3D:
-		return owner as Node3D
+func get_puck_carrier() -> Node3D:
+	var current_owner: Variant = get("_owner")
+	if current_owner is Node3D:
+		return current_owner as Node3D
 	return null
 
 func set_receiver_priority(receiver: Node3D, passer: Node3D, duration: float = 0.42) -> void:
@@ -57,14 +57,14 @@ func take_possession(owner: Node3D) -> void:
 	emit_signal("possession_changed", owner)
 
 func shoot(direction: Vector3, owner_velocity: Vector3, shot_power: float = 0.0, speed_scale: float = 1.0) -> void:
-	var previous_owner: Node3D = get_owner()
+	var previous_owner: Node3D = get_puck_carrier()
 	super.shoot(direction, owner_velocity, shot_power, speed_scale)
 	_blocked_player = previous_owner
 	_pickup_lock_timer = release_pickup_lock
 	emit_signal("possession_changed", null)
 
 func poke_free(direction: Vector3, force: float) -> void:
-	var previous_owner: Node3D = get_owner()
+	var previous_owner: Node3D = get_puck_carrier()
 	super.poke_free(direction, force)
 	_blocked_player = previous_owner
 	_pickup_lock_timer = release_pickup_lock * 0.75
