@@ -2,7 +2,8 @@ extends "res://scripts/hockey/test_rink_gameplay_pass.gd"
 
 const TeamPlayManagerScript: GDScript = preload("res://scripts/hockey/team_play_manager.gd")
 
-const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3(1.25, 1.0, 1.20)
+# Arena v1 artwork is authored at final world size.
+const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3.ONE
 const THREE_V_THREE_HOME_GOAL_X: float = 22.65
 const THREE_V_THREE_AWAY_GOAL_X: float = -22.65
 const THREE_V_THREE_GOAL_HALF_WIDTH: float = 1.48
@@ -46,8 +47,8 @@ func _apply_control_side(side: String, announce: bool) -> void:
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 37.0
-	camera.global_position = Vector3(0.0, 32.0, 29.0)
+	camera.size = 38.5
+	camera.global_position = Vector3(0.0, 33.0, 30.0)
 	camera.look_at(Vector3.ZERO, Vector3.UP)
 
 func _build_collision_manager() -> void:
