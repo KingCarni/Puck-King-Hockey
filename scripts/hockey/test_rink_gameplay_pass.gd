@@ -1,4 +1,4 @@
-extends "res://scripts/hockey/test_rink_art_pass.gd"
+extends "res://scripts/hockey/test_rink_ice2_pass.gd"
 
 const InputBindings: GDScript = preload("res://scripts/hockey/input/input_bindings.gd")
 const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_input_source.gd")
@@ -6,7 +6,8 @@ const AiCenterInputSource: GDScript = preload("res://scripts/hockey/input/ai_cen
 const SkaterCollisionManagerScript: GDScript = preload("res://scripts/hockey/skater_collision_manager.gd")
 const GameCameraScript: GDScript = preload("res://scripts/match/game_camera.gd")
 
-const VISUAL_RINK_SCALE: Vector3 = Vector3(1.14, 1.0, 1.14)
+# Arena v1 artwork is authored at final world size; do not scale its visual root.
+const VISUAL_RINK_SCALE: Vector3 = Vector3.ONE
 const EXPANDED_HOME_GOAL_X: float = 20.75
 const EXPANDED_AWAY_GOAL_X: float = -20.75
 const LEGAL_GOAL_HALF_WIDTH: float = 1.48
@@ -43,8 +44,8 @@ func _connect_goalie_whistles() -> void:
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 34.0
-	camera.global_position = Vector3(0.0, 30.0, 27.0)
+	camera.size = 36.5
+	camera.global_position = Vector3(0.0, 31.5, 28.5)
 	camera.look_at(Vector3.ZERO, Vector3.UP)
 
 func _check_goal_state() -> void:
@@ -85,7 +86,6 @@ func _is_legal_goal_crossing(team: String) -> bool:
 	return previous_position.x > EXPANDED_AWAY_GOAL_X and velocity.x <= -MIN_GOAL_ENTRY_SPEED
 
 func _reject_illegal_goal_attempt(team: String) -> void:
-	# Side-net/crease-crash attempts are cleared instead of counted.
 	var clear_direction: Vector3 = Vector3.LEFT if team == "HOME" else Vector3.RIGHT
 	var z_push: float = 0.70 if _puck.global_position.z >= 0.0 else -0.70
 	if _puck.has_method("poke_free"):
@@ -279,133 +279,63 @@ func _compute_three_stars() -> Array:
 
 func _display_name(node: Node3D) -> String:
 	match node.name:
-		&"Player": return "P1 CAPTAIN"
-		&"Player2": return "P2 CAPTAIN"
+		&"Player": return "HOME CAPTAIN"
+		&"Player2": return "AWAY CAPTAIN"
 		&"HomeTeammate": return "HOME WINGER"
 		&"AwayTeammate": return "AWAY WINGER"
 		&"HomeGoalie": return "HOME GOALIE"
 		&"AwayGoalie": return "AWAY GOALIE"
 	return String(node.name).to_upper()
 
-func _schedule_goal_draft(team: String) -> void:
-	var timer: SceneTreeTimer = get_tree().create_timer(REWARD_DRAFT_DELAY)
-	timer.timeout.connect(func() -> void:
-		_on_goal_draft_timeout(team)
-	)
-
-func _on_goal_draft_timeout(team: String) -> void:
-	if _match_clock != null and _match_clock.match_over:
-		return
-	if not _is_user_controlled_team(team):
-		_schedule_post_goal_reset()
-		return
-	var label: String = "HOME" if team == "HOME" else "AWAY"
-	if _hud != null:
-		_hud.show_notification("%s DRAFT PICK" % label, Color(1.0, 0.78, 0.10, 1.0), 1.0)
-	_show_reward_draft()
-
 func _append_ability_rewards() -> void:
-	_reward_options.append_array([
-		{
-			"id": "rocket_shot",
-			"title": "Rocket Shot",
-			"description": "Shots fly 30% faster and burn red hot.",
-			"glyph": "⚑",
-			"icon": "res://assets/art/powerups/powerup_rocket_shot.svg"
-		},
-		{
-			"id": "magnet_puck",
-			"title": "Magnet Puck",
-			"description": "Loose pucks curve toward your stick.",
-			"glyph": "⚛",
-			"icon": "res://assets/art/powerups/powerup_magnet_puck.svg"
-		},
-		{
-			"id": "freeze_blast",
-			"title": "Freeze Blast",
-			"description": "Your body checks freeze victims solid.",
-			"glyph": "❄",
-			"icon": "res://assets/art/powerups/powerup_freeze_opponent.svg"
-		}
-	])
+	# Ability cards are appended once to the reward pool.
+	var extras: Array[Dictionary] = [
+		{"name": "ROCKET SHOT", "description": "+35% shot power", "stat": "shot_power", "amount": 0.35},
+		{"name": "ICE FREEZE", "description": "Checks freeze enemies", "stat": "ice_freeze", "amount": 1.0},
+	]
+	for reward: Dictionary in extras:
+		if not _reward_exists(String(reward["name"])):
+			REWARDS.append(reward)
 
-func _show_reward_draft() -> void:
-	_current_reward_options = _pick_reward_options()
+func _reward_exists(reward_name: String) -> bool:
+	for reward: Dictionary in REWARDS:
+		if String(reward.get("name", "")) == reward_name:
+			return true
+	return false
+
+func _show_reward_draft(team: String = _control_side) -> void:
+	_current_reward_options.clear()
+	var shuffled: Array = REWARDS.duplicate()
+	shuffled.shuffle()
+	for index: int in range(mini(3, shuffled.size())):
+		_current_reward_options.append(shuffled[index])
 	if _reward_draft != null:
-		_reward_draft.set_options(_current_reward_options)
-	super._show_reward_draft()
+		_reward_draft.show_draft(_current_reward_options, team)
+	_reward_visible = true
 
-func _pick_reward_options() -> Array[Dictionary]:
-	var pool: Array = _reward_options.duplicate()
-	pool.shuffle()
-	var picked: Array[Dictionary] = []
-	for index: int in range(mini(3, pool.size())):
-		picked.append(pool[index])
-	return picked
-
-func _on_reward_selected(index: int, upgrade_id: String) -> void:
+func _on_reward_selected(index: int) -> void:
 	if index < 0 or index >= _current_reward_options.size():
 		return
-	var option: Dictionary = _current_reward_options[index]
-	var selected_id: String = String(option.get("id", upgrade_id))
-	_selected_upgrades.append(option)
-	_apply_upgrade(selected_id)
-	_update_upgrade_display()
-
+	var reward: Dictionary = _current_reward_options[index]
+	_apply_reward_to_target(reward)
 	_reward_visible = false
-	_goal_lockout = false
-	if _reward_draft != null:
-		_reward_draft.hide_draft()
+	_schedule_post_goal_reset()
 
-	SfxPlayer.play(SfxPlayer.ID_REWARD_PICK)
-	_hud.show_notification("PICKED UP: %s" % String(option.get("title", selected_id)), Color(1.0, 0.78, 0.10, 1.0), 1.8)
-	_set_match_enabled(true)
-	_reset_faceoff(true)
-	if _match_clock != null:
-		_match_clock.resume()
-
-func _apply_upgrade(upgrade_id: String) -> void:
-	var target: Node3D = _reward_target_player if _reward_target_player != null else _player
-	match upgrade_id:
-		"rocket_shot":
-			_apply_float_multiplier(target, "shot_speed_scale", 1.30)
-			return
-		"magnet_puck":
-			_puck.set("magnet_target", target)
-			_puck.set("magnet_radius", float(_puck.get("magnet_radius")) + 0.5)
-			return
-		"freeze_blast":
-			_apply_float_add(target, "check_freeze_seconds", 1.1)
-			return
-	match upgrade_id:
-		"rocket_skates":
-			_apply_float_multiplier(target, "acceleration", 1.08)
-			_apply_float_multiplier(target, "sprint_acceleration", 1.10)
-			_apply_float_multiplier(target, "max_speed", 1.12)
-			_apply_float_multiplier(target, "sprint_max_speed", 1.15)
-		"sticky_tape":
-			_apply_float_add(target, "puck_carry_distance", 0.18)
-			_puck.set("pickup_radius", float(_puck.get("pickup_radius")) * 1.25)
-			_puck.set("carry_lag_speed", float(_puck.get("carry_lag_speed")) * 1.18)
-		"titanium_pads":
-			_apply_float_multiplier(target, "check_knockback_force", 1.35)
-			_apply_float_multiplier(target, "check_puck_force", 1.25)
-			_apply_float_add(target, "check_hit_radius", 0.16)
-		_:
-			return
-
-func _apply_float_multiplier(target: Node3D, property_name: String, multiplier: float) -> void:
-	if target == null:
+func _apply_reward_to_target(reward: Dictionary) -> void:
+	if _reward_target_player == null:
 		return
-	var current: Variant = target.get(property_name)
-	if current == null:
-		return
-	target.set(property_name, float(current) * multiplier)
-
-func _apply_float_add(target: Node3D, property_name: String, amount: float) -> void:
-	if target == null:
-		return
-	var current: Variant = target.get(property_name)
-	if current == null:
-		return
-	target.set(property_name, float(current) + amount)
+	var stat: String = String(reward.get("stat", ""))
+	var amount: float = float(reward.get("amount", 0.0))
+	match stat:
+		"speed":
+			_reward_target_player.set("max_speed", float(_reward_target_player.get("max_speed")) + amount)
+		"acceleration":
+			_reward_target_player.set("acceleration", float(_reward_target_player.get("acceleration")) + amount)
+		"shot_power":
+			_reward_target_player.set("shot_power", float(_reward_target_player.get("shot_power")) + amount)
+		"check_power":
+			_reward_target_player.set("check_power", float(_reward_target_player.get("check_power")) + amount)
+		"ice_freeze":
+			_reward_target_player.set("ice_freeze_enabled", true)
+	if _hud != null:
+		_hud.show_notification("%s: %s" % [_display_name(_reward_target_player), String(reward.get("name", "UPGRADE"))], Color(1.0, 0.78, 0.10, 1.0), 2.0)
