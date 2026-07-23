@@ -1,14 +1,17 @@
-extends "res://scripts/hockey/test_rink_net_play_pass.gd"
+extends "res://scripts/hockey/test_rink_3v3_pass.gd"
 
-# Puck King Arena v1 presentation.
-# pkh_ice2.png contains the complete visible arena. Gameplay bounds, scoring,
-# net collision, reset anchors, and camera values come from RinkGeometry.
+# Puck King Arena v1 presentation and authoritative match integration.
+# This active scene intentionally extends the stable 3v3 layer directly.
+# Physical rink and net interaction remain in RinkGeometry plus the net-play
+# player, puck, winger, and goalie controller wrappers assigned by TestRink.tscn.
 
+const RinkGeometry: GDScript = preload("res://scripts/hockey/rink_geometry.gd")
 const ICE2_TEXTURE_PATH: String = "res://assets/art/rink/pkh_ice2.png"
 
 func _ready() -> void:
 	super._ready()
-	_hide_debug_geometry()
+	world.scale = Vector3.ONE
+	_configure_goalies_from_spec()
 	_run_arena_alignment_checks()
 
 func _configure_camera() -> void:
@@ -16,6 +19,55 @@ func _configure_camera() -> void:
 	camera.size = RinkGeometry.CAMERA_ORTHO_SIZE
 	camera.global_position = RinkGeometry.CAMERA_POSITION
 	camera.look_at(RinkGeometry.CAMERA_LOOK_TARGET, Vector3.UP)
+
+func _check_goal_state() -> void:
+	if _puck == null or _goal_lockout:
+		return
+	if _puck.has_method("is_possessed") and bool(_puck.call("is_possessed")):
+		return
+
+	var current: Vector3 = _puck.global_position
+	var previous: Vector3 = current
+	if _puck.has_method("get_previous_position"):
+		previous = _puck.call("get_previous_position")
+
+	var velocity: Vector3 = Vector3.ZERO
+	if _puck.has_method("get_velocity"):
+		velocity = _puck.call("get_velocity")
+
+	var scoring_team: String = RinkGeometry.legal_goal_crossing(previous, current, velocity)
+	if scoring_team != "":
+		_register_goal(scoring_team)
+
+func _reset_faceoff(clear_puck: bool) -> void:
+	super._reset_faceoff(clear_puck)
+	_reset_arena_actor(_player, RinkGeometry.HOME_CENTER_START, Vector3.RIGHT)
+	_reset_arena_actor(_away_skater, RinkGeometry.AWAY_CENTER_START, Vector3.LEFT)
+	_reset_arena_actor(_home_teammate, RinkGeometry.HOME_LEFT_WING_START, Vector3.RIGHT)
+	_reset_arena_actor(_home_winger2, RinkGeometry.HOME_RIGHT_WING_START, Vector3.RIGHT)
+	_reset_arena_actor(_away_teammate, RinkGeometry.AWAY_LEFT_WING_START, Vector3.LEFT)
+	_reset_arena_actor(_away_winger2, RinkGeometry.AWAY_RIGHT_WING_START, Vector3.LEFT)
+	if clear_puck and _puck != null:
+		_puck.global_position = RinkGeometry.CENTER_SPAWN
+	_configure_goalies_from_spec()
+
+func _reset_arena_actor(actor: Node3D, spawn_position: Vector3, facing: Vector3) -> void:
+	if actor == null:
+		return
+	actor.global_position = spawn_position
+	actor.set("_move_velocity", Vector3.ZERO)
+	actor.set("_last_facing_direction", facing)
+	actor.set("_stun_timer", 0.0)
+	actor.set("_shoot_cooldown_timer", 0.0)
+
+func _configure_goalies_from_spec() -> void:
+	for goalie: Node3D in [_home_goalie, _away_goalie]:
+		if goalie == null:
+			continue
+		goalie.set("guard_distance_from_center", RinkGeometry.GOALIE_GUARD_X)
+		goalie.set("crease_half_width", RinkGeometry.GOALIE_CREASE_HALF_WIDTH)
+		if goalie.has_method("reset_to_center"):
+			goalie.call("reset_to_center")
 
 func _create_floor_backdrop() -> void:
 	var floor: MeshInstance3D = _create_box(
@@ -28,8 +80,6 @@ func _create_floor_backdrop() -> void:
 	world.add_child(floor)
 
 func _create_ice_surface() -> void:
-	# Keep a physical-looking ice slab directly under the playable area so any
-	# transparent pixels around the arena artwork never expose the dark floor.
 	var base_ice: MeshInstance3D = _create_box(
 		"ArenaV1IceBase",
 		Vector3(RinkGeometry.LENGTH, ICE_THICKNESS, RinkGeometry.WIDTH),
@@ -57,8 +107,7 @@ func _create_ice_surface() -> void:
 	arena_quad.material_override = _make_ice_texture_plane_material(texture)
 	world.add_child(arena_quad)
 
-# The following presentation is baked into pkh_ice2.png. The authoritative
-# physical boards and nets remain in RinkGeometry and the net-play wrappers.
+# These visuals are baked into pkh_ice2.png.
 func _create_ice_surface_details() -> void:
 	pass
 
@@ -87,11 +136,6 @@ func _load_ice_texture() -> Texture2D:
 	if not ResourceLoader.exists(ICE2_TEXTURE_PATH):
 		return null
 	return load(ICE2_TEXTURE_PATH) as Texture2D
-
-func _hide_debug_geometry() -> void:
-	var overlay: Node3D = get_node_or_null("NetPlayGeometry") as Node3D
-	if overlay != null:
-		overlay.visible = false
 
 func _run_arena_alignment_checks() -> void:
 	var issues: PackedStringArray = RinkGeometry.validate_spec()
