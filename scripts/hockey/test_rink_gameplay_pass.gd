@@ -18,7 +18,7 @@ var _collision_manager: Node3D = null
 var _control_side: String = "HOME"
 var _game_camera: Node = null
 var _goal_stats: Dictionary = {}
-var _current_reward_options: Array[Dictionary] = []
+var _current_reward_options: Array = []
 
 func _ready() -> void:
 	super._ready()
@@ -38,9 +38,10 @@ func _build_game_camera() -> void:
 	_game_camera.call("setup", camera, _puck)
 
 func _connect_goalie_whistles() -> void:
-	for goalie: Node3D in [_home_goalie, _away_goalie]:
-		if goalie != null and goalie.has_signal("puck_frozen"):
-			goalie.puck_frozen.connect(_on_goalie_froze_puck)
+	var goalies: Array = [_home_goalie, _away_goalie]
+	for goalie in goalies:
+		if goalie is Node3D and goalie.has_signal("puck_frozen"):
+			goalie.connect("puck_frozen", _on_goalie_froze_puck)
 
 func _configure_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -109,7 +110,7 @@ func _build_collision_manager() -> void:
 	_collision_manager.set_script(SkaterCollisionManagerScript)
 	add_child(_collision_manager)
 
-	var bodies: Array[Node3D] = []
+	var bodies: Array = []
 	_add_collision_body(bodies, _player)
 	_add_collision_body(bodies, _away_skater)
 	_add_collision_body(bodies, _home_teammate)
@@ -118,7 +119,7 @@ func _build_collision_manager() -> void:
 	_add_collision_body(bodies, _away_goalie)
 	_collision_manager.call("setup", bodies)
 
-func _add_collision_body(bodies: Array[Node3D], body: Node3D) -> void:
+func _add_collision_body(bodies: Array, body) -> void:
 	if body != null:
 		bodies.append(body)
 
@@ -190,11 +191,11 @@ func _is_user_controlled_team(team: String) -> bool:
 func _credit_goal_scorer(team: String) -> void:
 	if _puck == null or not _puck.has_method("get_last_toucher"):
 		return
-	var scorer: Node3D = _puck.call("get_last_toucher") as Node3D
-	if scorer == null:
+	var scorer = _puck.call("get_last_toucher")
+	if not (scorer is Node3D):
 		return
-	var home_scorers: Array[StringName] = [&"Player", &"HomeTeammate"]
-	var away_scorers: Array[StringName] = [&"Player2", &"AwayTeammate"]
+	var home_scorers: Array = [&"Player", &"HomeTeammate"]
+	var away_scorers: Array = [&"Player2", &"AwayTeammate"]
 	var valid: bool = (team == "HOME" and scorer.name in home_scorers) or (team == "AWAY" and scorer.name in away_scorers)
 	if not valid:
 		return
@@ -214,7 +215,7 @@ func _flash_goal_light(team: String) -> void:
 	add_child(light)
 
 	var tween: Tween = create_tween()
-	for i: int in range(5):
+	for _i in range(5):
 		tween.tween_property(light, "light_energy", 7.5, 0.11)
 		tween.tween_property(light, "light_energy", 0.5, 0.15)
 	tween.tween_callback(light.queue_free)
@@ -253,29 +254,37 @@ func _on_match_ended(winner: String, home_score: int, away_score: int) -> void:
 
 func _compute_three_stars() -> Array:
 	var candidates: Array = []
-	for skater: Node3D in [_player, _away_skater, _home_teammate, _away_teammate]:
-		if skater == null:
+	var skaters: Array = [_player, _away_skater, _home_teammate, _away_teammate]
+	for skater in skaters:
+		if not (skater is Node3D):
 			continue
 		var display: String = _display_name(skater)
 		var goals: int = int(_goal_stats.get(display, {}).get("goals", 0))
-		var hits: int = int(skater.get("hits_delivered")) if skater.get("hits_delivered") != null else 0
+		var hits_value = skater.get("hits_delivered")
+		var hits: int = int(hits_value) if hits_value != null else 0
 		var score: float = goals * 3.0 + hits * 0.75
 		candidates.append({"name": display, "score": score, "line": "%d G · %d HIT" % [goals, hits]})
-	for goalie: Node3D in [_home_goalie, _away_goalie]:
-		if goalie == null:
+
+	var goalies: Array = [_home_goalie, _away_goalie]
+	for goalie in goalies:
+		if not (goalie is Node3D):
 			continue
-		var saves: int = int(goalie.get("saves_made")) if goalie.get("saves_made") != null else 0
+		var saves_value = goalie.get("saves_made")
+		var saves: int = int(saves_value) if saves_value != null else 0
 		candidates.append({"name": _display_name(goalie), "score": saves * 0.85, "line": "%d SAVES" % saves})
 
-	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["score"]) > float(b["score"]))
+	candidates.sort_custom(_sort_star_candidates)
 	var stars: Array = []
-	var glyphs: Array[String] = ["★", "★★", "★★★"]
-	for index: int in range(mini(3, candidates.size())):
+	var glyphs: Array = ["★", "★★", "★★★"]
+	for index in range(min(3, candidates.size())):
 		var entry: Dictionary = candidates[index]
-		stars.append("%s  %s — %s" % [glyphs[index] if index < glyphs.size() else "★", String(entry["name"]), String(entry["line"])])
+		stars.append("%s  %s — %s" % [glyphs[index], String(entry["name"]), String(entry["line"])])
 	if not stars.is_empty():
 		stars[0] = "MVP " + String(stars[0])
 	return stars
+
+func _sort_star_candidates(a: Dictionary, b: Dictionary) -> bool:
+	return float(a.get("score", 0.0)) > float(b.get("score", 0.0))
 
 func _display_name(node: Node3D) -> String:
 	match node.name:
