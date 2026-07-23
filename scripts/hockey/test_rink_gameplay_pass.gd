@@ -30,6 +30,20 @@ func _ready() -> void:
 	_append_ability_rewards()
 	_apply_control_side(_control_side, false)
 
+func _append_ability_rewards() -> void:
+	_current_reward_options = _reward_options.duplicate(true)
+	if _reward_draft != null and _reward_draft.has_method("set_options"):
+		_reward_draft.call("set_options", _current_reward_options)
+
+func _schedule_goal_draft(_team: String) -> void:
+	var timer: SceneTreeTimer = get_tree().create_timer(REWARD_DRAFT_DELAY)
+	timer.timeout.connect(_on_goal_draft_timeout)
+
+func _on_goal_draft_timeout() -> void:
+	if _match_clock != null and _match_clock.match_over:
+		return
+	_show_reward_draft()
+
 func _build_game_camera() -> void:
 	_game_camera = Node.new()
 	_game_camera.name = "GameCamera"
@@ -194,8 +208,8 @@ func _credit_goal_scorer(team: String) -> void:
 	var scorer = _puck.call("get_last_toucher")
 	if not (scorer is Node3D):
 		return
-	var home_scorers: Array = [&"Player", &"HomeTeammate"]
-	var away_scorers: Array = [&"Player2", &"AwayTeammate"]
+	var home_scorers: Array[StringName] = [&"Player", &"HomeTeammate"]
+	var away_scorers: Array[StringName] = [&"Player2", &"AwayTeammate"]
 	var valid: bool = (team == "HOME" and scorer.name in home_scorers) or (team == "AWAY" and scorer.name in away_scorers)
 	if not valid:
 		return
