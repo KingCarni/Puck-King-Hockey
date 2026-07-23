@@ -2,7 +2,6 @@ extends "res://scripts/hockey/test_rink_gameplay_pass.gd"
 
 const TeamPlayManagerScript: GDScript = preload("res://scripts/hockey/team_play_manager.gd")
 
-# Arena v1 artwork is authored at final world size.
 const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3.ONE
 const THREE_V_THREE_HOME_GOAL_X: float = 22.65
 const THREE_V_THREE_AWAY_GOAL_X: float = -22.65
@@ -28,15 +27,15 @@ func _setup_team_play() -> void:
 	_team_play_manager.name = "TeamPlayManager"
 	_team_play_manager.set_script(TeamPlayManagerScript)
 	add_child(_team_play_manager)
-	var home: Array[Node3D] = [_player, _home_teammate, _home_winger2]
-	var away: Array[Node3D] = [_away_skater, _away_teammate, _away_winger2]
+	var home: Array = [_player, _home_teammate, _home_winger2]
+	var away: Array = [_away_skater, _away_teammate, _away_winger2]
 	_team_play_manager.call("setup", _puck, home, away, _control_side)
 	_team_indicators = get_node_or_null("PossessionIndicators")
 	if _team_indicators != null:
 		_team_play_manager.connect("controlled_player_changed", Callable(_team_indicators, "set_controlled_player"))
 		_team_play_manager.connect("pass_target_changed", Callable(_team_indicators, "set_pass_target"))
 		_team_play_manager.connect("call_acknowledged", Callable(_team_indicators, "acknowledge_call"))
-		var controlled: Variant = _team_play_manager.get("controlled_player")
+		var controlled = _team_play_manager.get("controlled_player")
 		if controlled is Node3D:
 			_team_indicators.call("set_controlled_player", controlled)
 
@@ -58,10 +57,20 @@ func _build_collision_manager() -> void:
 	add_child(_collision_manager)
 	_collision_manager.call("setup", _get_collision_bodies())
 
-func _get_collision_bodies() -> Array[Node3D]:
-	var bodies: Array[Node3D] = []
-	for body: Node3D in [_player, _away_skater, _home_teammate, _away_teammate, _home_winger2, _away_winger2, _home_goalie, _away_goalie]:
-		if body != null:
+func _get_collision_bodies() -> Array:
+	var bodies: Array = []
+	var candidates: Array = [
+		_player,
+		_away_skater,
+		_home_teammate,
+		_away_teammate,
+		_home_winger2,
+		_away_winger2,
+		_home_goalie,
+		_away_goalie,
+	]
+	for body in candidates:
+		if body is Node3D:
 			bodies.append(body)
 	return bodies
 
@@ -133,45 +142,56 @@ func _set_match_enabled(is_enabled: bool) -> void:
 
 func _compute_three_stars() -> Array:
 	var candidates: Array = []
-	for skater: Node3D in [_player, _away_skater, _home_teammate, _away_teammate, _home_winger2, _away_winger2]:
-		if skater == null:
+	var skaters: Array = [_player, _away_skater, _home_teammate, _away_teammate, _home_winger2, _away_winger2]
+	for skater in skaters:
+		if not (skater is Node3D):
 			continue
 		var display: String = _display_name(skater)
 		var goals: int = int(_goal_stats.get(display, {}).get("goals", 0))
-		var hits: int = int(skater.get("hits_delivered")) if skater.get("hits_delivered") != null else 0
+		var hits_value = skater.get("hits_delivered")
+		var hits: int = int(hits_value) if hits_value != null else 0
 		var score: float = goals * 3.0 + hits * 0.75
 		candidates.append({"name": display, "score": score, "line": "%d G · %d HIT" % [goals, hits]})
-	for goalie: Node3D in [_home_goalie, _away_goalie]:
-		if goalie == null:
+	var goalies: Array = [_home_goalie, _away_goalie]
+	for goalie in goalies:
+		if not (goalie is Node3D):
 			continue
-		var saves: int = int(goalie.get("saves_made")) if goalie.get("saves_made") != null else 0
+		var saves_value = goalie.get("saves_made")
+		var saves: int = int(saves_value) if saves_value != null else 0
 		candidates.append({"name": _display_name(goalie), "score": saves * 0.85, "line": "%d SAVES" % saves})
-	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["score"]) > float(b["score"]))
+	candidates.sort_custom(_sort_star_candidates)
 	var stars: Array = []
-	var glyphs: Array[String] = ["★", "★★", "★★★"]
-	for index: int in range(mini(3, candidates.size())):
+	var glyphs: Array = ["★", "★★", "★★★"]
+	for index in range(mini(3, candidates.size())):
 		var entry: Dictionary = candidates[index]
-		stars.append("%s  %s — %s" % [glyphs[index] if index < glyphs.size() else "★", String(entry["name"]), String(entry["line"])])
+		stars.append("%s  %s — %s" % [glyphs[index], String(entry["name"]), String(entry["line"])])
 	if not stars.is_empty():
 		stars[0] = "MVP " + String(stars[0])
 	return stars
 
+func _sort_star_candidates(a: Dictionary, b: Dictionary) -> bool:
+	return float(a.get("score", 0.0)) > float(b.get("score", 0.0))
+
 func _display_name(node: Node3D) -> String:
 	match node.name:
-		&"HomeTeammate2": return "HOME RIGHT WING"
-		&"AwayTeammate2": return "AWAY RIGHT WING"
-		&"HomeTeammate": return "HOME LEFT WING"
-		&"AwayTeammate": return "AWAY LEFT WING"
+		&"HomeTeammate2":
+			return "HOME RIGHT WING"
+		&"AwayTeammate2":
+			return "AWAY RIGHT WING"
+		&"HomeTeammate":
+			return "HOME LEFT WING"
+		&"AwayTeammate":
+			return "AWAY LEFT WING"
 	return super._display_name(node)
 
 func _credit_goal_scorer(team: String) -> void:
 	if _puck == null or not _puck.has_method("get_last_toucher"):
 		return
-	var scorer: Node3D = _puck.call("get_last_toucher") as Node3D
-	if scorer == null:
+	var scorer = _puck.call("get_last_toucher")
+	if not (scorer is Node3D):
 		return
-	var home_scorers: Array[StringName] = [&"Player", &"HomeTeammate", &"HomeTeammate2"]
-	var away_scorers: Array[StringName] = [&"Player2", &"AwayTeammate", &"AwayTeammate2"]
+	var home_scorers: Array = [&"Player", &"HomeTeammate", &"HomeTeammate2"]
+	var away_scorers: Array = [&"Player2", &"AwayTeammate", &"AwayTeammate2"]
 	var valid: bool = (team == "HOME" and scorer.name in home_scorers) or (team == "AWAY" and scorer.name in away_scorers)
 	if not valid:
 		return
