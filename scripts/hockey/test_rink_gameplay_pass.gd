@@ -1,4 +1,4 @@
-extends "res://scripts/hockey/test_rink_ice2_pass.gd"
+extends "res://scripts/hockey/test_rink_art_pass.gd"
 
 const InputBindings: GDScript = preload("res://scripts/hockey/input/input_bindings.gd")
 const HumanInputSource: GDScript = preload("res://scripts/hockey/input/human_input_source.gd")
@@ -279,63 +279,10 @@ func _compute_three_stars() -> Array:
 
 func _display_name(node: Node3D) -> String:
 	match node.name:
-		&"Player": return "HOME CAPTAIN"
-		&"Player2": return "AWAY CAPTAIN"
+		&"Player": return "HOME CENTER"
+		&"Player2": return "AWAY CENTER"
 		&"HomeTeammate": return "HOME WINGER"
 		&"AwayTeammate": return "AWAY WINGER"
 		&"HomeGoalie": return "HOME GOALIE"
 		&"AwayGoalie": return "AWAY GOALIE"
-	return String(node.name).to_upper()
-
-func _append_ability_rewards() -> void:
-	# Ability cards are appended once to the reward pool.
-	var extras: Array[Dictionary] = [
-		{"name": "ROCKET SHOT", "description": "+35% shot power", "stat": "shot_power", "amount": 0.35},
-		{"name": "ICE FREEZE", "description": "Checks freeze enemies", "stat": "ice_freeze", "amount": 1.0},
-	]
-	for reward: Dictionary in extras:
-		if not _reward_exists(String(reward["name"])):
-			REWARDS.append(reward)
-
-func _reward_exists(reward_name: String) -> bool:
-	for reward: Dictionary in REWARDS:
-		if String(reward.get("name", "")) == reward_name:
-			return true
-	return false
-
-func _show_reward_draft(team: String = _control_side) -> void:
-	_current_reward_options.clear()
-	var shuffled: Array = REWARDS.duplicate()
-	shuffled.shuffle()
-	for index: int in range(mini(3, shuffled.size())):
-		_current_reward_options.append(shuffled[index])
-	if _reward_draft != null:
-		_reward_draft.show_draft(_current_reward_options, team)
-	_reward_visible = true
-
-func _on_reward_selected(index: int) -> void:
-	if index < 0 or index >= _current_reward_options.size():
-		return
-	var reward: Dictionary = _current_reward_options[index]
-	_apply_reward_to_target(reward)
-	_reward_visible = false
-	_schedule_post_goal_reset()
-
-func _apply_reward_to_target(reward: Dictionary) -> void:
-	if _reward_target_player == null:
-		return
-	var stat: String = String(reward.get("stat", ""))
-	var amount: float = float(reward.get("amount", 0.0))
-	match stat:
-		"speed":
-			_reward_target_player.set("max_speed", float(_reward_target_player.get("max_speed")) + amount)
-		"acceleration":
-			_reward_target_player.set("acceleration", float(_reward_target_player.get("acceleration")) + amount)
-		"shot_power":
-			_reward_target_player.set("shot_power", float(_reward_target_player.get("shot_power")) + amount)
-		"check_power":
-			_reward_target_player.set("check_power", float(_reward_target_player.get("check_power")) + amount)
-		"ice_freeze":
-			_reward_target_player.set("ice_freeze_enabled", true)
-	if _hud != null:
-		_hud.show_notification("%s: %s" % [_display_name(_reward_target_player), String(reward.get("name", "UPGRADE"))], Color(1.0, 0.78, 0.10, 1.0), 2.0)
+	return String(node.name)
