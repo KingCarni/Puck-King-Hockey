@@ -14,10 +14,10 @@ extends Node3D
 
 var _bodies: Array[Node3D] = []
 
-func setup(bodies: Array[Node3D]) -> void:
+func setup(bodies: Array) -> void:
 	_bodies.clear()
-	for body: Node3D in bodies:
-		if body != null:
+	for body in bodies:
+		if body is Node3D:
 			_bodies.append(body)
 
 func _physics_process(delta: float) -> void:
