@@ -1,16 +1,17 @@
 extends Node3D
 
-# Lightweight in-world identity labels for Standard Mode.
-# Labels are world-scaled (not screen-fixed), tracked independently from skater
-# rotation, and placed just below each player from the fixed gameplay camera.
+# Lightweight player identity labels for Standard Mode.
+# Names are rendered in a dedicated 2D overlay and positioned from each
+# skater's projected screen position. This guarantees they stay below the
+# player and prevents depth/layer flicker against skater art.
 
-const LABEL_WORLD_OFFSET: Vector3 = Vector3(0.0, 0.18, 0.92)
-const NORMAL_FONT_SIZE: int = 24
-const CONTROLLED_FONT_SIZE: int = 26
-const LABEL_PIXEL_SIZE: float = 0.021
-const NORMAL_OUTLINE_SIZE: int = 3
-const CONTROLLED_OUTLINE_SIZE: int = 4
-const NORMAL_ALPHA: float = 0.58
+const SCREEN_OFFSET: Vector2 = Vector2(0.0, 34.0)
+const LABEL_SIZE: Vector2 = Vector2(118.0, 22.0)
+const NORMAL_FONT_SIZE: int = 13
+const CONTROLLED_FONT_SIZE: int = 15
+const NORMAL_OUTLINE_SIZE: int = 2
+const CONTROLLED_OUTLINE_SIZE: int = 3
+const NORMAL_ALPHA: float = 0.68
 const CONTROLLED_ALPHA: float = 1.0
 const RING_Y: float = -0.43
 const RING_INNER_RADIUS: float = 0.70
@@ -21,9 +22,12 @@ var _rings: Dictionary = {}
 var _players: Dictionary = {}
 var _base_names: Dictionary = {}
 var _controlled_player: Node3D = null
+var _canvas_layer: CanvasLayer = null
+var _overlay: Control = null
 
 func setup(players: Array[Node3D], roster: RefCounted) -> void:
 	clear()
+	_build_overlay()
 	for player: Node3D in players:
 		if player == null:
 			continue
@@ -37,26 +41,33 @@ func setup(players: Array[Node3D], roster: RefCounted) -> void:
 	set_process(true)
 
 func _process(_delta: float) -> void:
-	# Labels live under this manager rather than under the skater. That prevents
-	# player rotation from swinging the text to the side or above the sprite.
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null:
+		return
 	for instance_id: Variant in _labels.keys():
 		var player: Node3D = _players.get(instance_id) as Node3D
-		var label: Label3D = _labels.get(instance_id) as Label3D
+		var label: Label = _labels.get(instance_id) as Label
 		if player == null or label == null or not is_instance_valid(player) or not is_instance_valid(label):
 			continue
-		label.global_position = player.global_position + LABEL_WORLD_OFFSET
+		var behind_camera: bool = camera.is_position_behind(player.global_position)
+		label.visible = not behind_camera
+		if behind_camera:
+			continue
+		var screen_position: Vector2 = camera.unproject_position(player.global_position)
+		label.position = screen_position + SCREEN_OFFSET - LABEL_SIZE * 0.5
 
 func set_controlled_player(player: Node3D) -> void:
 	_controlled_player = player
 	_refresh_styles()
 
 func clear() -> void:
-	for label: Variant in _labels.values():
-		if label is Node and is_instance_valid(label):
-			label.queue_free()
 	for ring: Variant in _rings.values():
 		if ring is Node and is_instance_valid(ring):
 			ring.queue_free()
+	if _canvas_layer != null and is_instance_valid(_canvas_layer):
+		_canvas_layer.queue_free()
+	_canvas_layer = null
+	_overlay = null
 	_labels.clear()
 	_rings.clear()
 	_players.clear()
@@ -64,26 +75,34 @@ func clear() -> void:
 	_controlled_player = null
 	set_process(false)
 
+func _build_overlay() -> void:
+	_canvas_layer = CanvasLayer.new()
+	_canvas_layer.name = "PlayerNameCanvas"
+	_canvas_layer.layer = 8
+	add_child(_canvas_layer)
+
+	_overlay = Control.new()
+	_overlay.name = "PlayerNameOverlay"
+	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas_layer.add_child(_overlay)
+
 func _add_identity(player: Node3D, display_name: String) -> void:
 	var instance_id: int = player.get_instance_id()
 	var short_name: String = _short_name(display_name)
 	_players[instance_id] = player
 	_base_names[instance_id] = short_name
 
-	var label := Label3D.new()
+	var label := Label.new()
 	label.name = "PlayerNameLabel"
 	label.text = short_name
-	label.global_position = player.global_position + LABEL_WORLD_OFFSET
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.fixed_size = false
-	label.pixel_size = LABEL_PIXEL_SIZE
-	label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	label.modulate = _team_color(player)
-	label.outline_modulate = Color(0.015, 0.015, 0.02, 0.94)
+	label.size = LABEL_SIZE
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	add_child(label)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_color_override("font_color", _team_color(player))
+	label.add_theme_color_override("font_outline_color", Color(0.015, 0.015, 0.02, 0.96))
+	_overlay.add_child(label)
 	_labels[instance_id] = label
 
 	var ring := MeshInstance3D.new()
@@ -113,18 +132,16 @@ func _add_identity(player: Node3D, display_name: String) -> void:
 
 func _refresh_styles() -> void:
 	for instance_id: Variant in _labels.keys():
-		var label: Label3D = _labels.get(instance_id) as Label3D
+		var label: Label = _labels.get(instance_id) as Label
 		var player: Node3D = _players.get(instance_id) as Node3D
 		if label == null or player == null or not is_instance_valid(label) or not is_instance_valid(player):
 			continue
 		var is_controlled: bool = player == _controlled_player
 		var base_name: String = String(_base_names.get(instance_id, label.text))
 
-		label.font_size = CONTROLLED_FONT_SIZE if is_controlled else NORMAL_FONT_SIZE
-		label.outline_size = CONTROLLED_OUTLINE_SIZE if is_controlled else NORMAL_OUTLINE_SIZE
+		label.add_theme_font_size_override("font_size", CONTROLLED_FONT_SIZE if is_controlled else NORMAL_FONT_SIZE)
+		label.add_theme_constant_override("outline_size", CONTROLLED_OUTLINE_SIZE if is_controlled else NORMAL_OUTLINE_SIZE)
 		label.modulate.a = CONTROLLED_ALPHA if is_controlled else NORMAL_ALPHA
-		# Slashes read as compact stick silhouettes without relying on oversized
-		# colour-emoji glyphs from the operating system font fallback.
 		label.text = "╱ %s ╲" % base_name if is_controlled else base_name
 
 		var ring: MeshInstance3D = _rings.get(instance_id) as MeshInstance3D
