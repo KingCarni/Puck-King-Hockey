@@ -118,10 +118,10 @@ static func fallback_definition(node_name: StringName, side: StringName, positio
 
 static func _fallback_display_name(node_name: StringName, side: StringName) -> String:
 	match node_name:
-		&"Player": return "HOME CENTER"
-		&"Player2": return "AWAY CENTER"
-		&"HomeTeammate": return "HOME LEFT WING"
-		&"AwayTeammate": return "AWAY LEFT WING"
-		&"HomeTeammate2": return "HOME RIGHT WING"
-		&"AwayTeammate2": return "AWAY RIGHT WING"
-	return "%s SKATER" % String(side)
+		&"Player": return "Duane Clutzky"
+		&"Player2": return "Brick Malone"
+		&"HomeTeammate": return "Gronk McKrunk"
+		&"AwayTeammate": return "Axel Frost"
+		&"HomeTeammate2": return "Finn O'Flash"
+		&"AwayTeammate2": return "Tommy Top Shelf"
+	return "Rico Rocket" if side == &"HOME" else "Barry Biscuit"
