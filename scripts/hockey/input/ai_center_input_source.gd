@@ -24,9 +24,10 @@ func get_move_vector() -> Vector2:
 	var target: Vector3 = _get_puck_position()
 	_sprint_frames = 0
 	if _puck.has_method("is_possessed_by") and bool(_puck.call("is_possessed_by", _owner)):
-		target = Vector3(17.8 * _attack_direction, _owner.global_position.y, clampf(_owner.global_position.z * 0.25, -2.7, 2.7))
+		var shooting_lane_z: float = clampf(_owner.global_position.z * 0.20, -2.4, 2.4)
+		target = Vector3(18.8 * _attack_direction, _owner.global_position.y, shooting_lane_z)
 		_prepare_shot_if_ready()
-		_sprint_frames = 10 if absf(target.x - _owner.global_position.x) > 7.0 else 0
+		_sprint_frames = 12 if absf(target.x - _owner.global_position.x) > 5.5 else 0
 	else:
 		_prepare_check_if_pressuring()
 		var puck_distance: float = Vector3(target.x - _owner.global_position.x, 0.0, target.z - _owner.global_position.z).length()
@@ -36,13 +37,13 @@ func get_move_vector() -> Vector2:
 	if flat_delta.length_squared() <= 0.05:
 		return Vector2.ZERO
 	var direction: Vector3 = flat_delta.normalized()
-	return Vector2(direction.x, direction.z) * 0.82
+	return Vector2(direction.x, direction.z) * 0.88
 
 func is_sprint_pressed() -> bool:
 	return _sprint_frames > 0
 
 func is_shoot_just_pressed() -> bool:
-	return _shoot_pressed_frames == 2
+	return _shoot_pressed_frames == 3
 
 func is_shoot_pressed() -> bool:
 	return _shoot_pressed_frames > 0
@@ -51,9 +52,7 @@ func is_shoot_just_released() -> bool:
 	return _shoot_pressed_frames == 1
 
 func is_check_just_pressed() -> bool:
-	if _check_cooldown == 1:
-		return true
-	return false
+	return _check_cooldown == 1
 
 func is_pass_just_pressed() -> bool:
 	return false
@@ -71,13 +70,17 @@ func _tick_action_timers() -> void:
 func _prepare_shot_if_ready() -> void:
 	if _shoot_cooldown > 0 or _shoot_pressed_frames > 0:
 		return
-	if absf(_owner.global_position.x) < 10.0:
-		return
 	var attacking_correct_end: bool = _owner.global_position.x * _attack_direction > 0.0
 	if not attacking_correct_end:
 		return
-	_shoot_pressed_frames = 2
-	_shoot_cooldown = 85
+	var distance_to_goal_line: float = absf(20.75 * _attack_direction - _owner.global_position.x)
+	var central_lane: bool = absf(_owner.global_position.z) <= 5.2
+	var prime_chance: bool = distance_to_goal_line <= 8.5 and central_lane
+	var rush_chance: bool = distance_to_goal_line <= 11.5 and absf(_owner.global_position.z) <= 3.8
+	if not prime_chance and not rush_chance:
+		return
+	_shoot_pressed_frames = 3
+	_shoot_cooldown = 48 if prime_chance else 66
 
 func _prepare_check_if_pressuring() -> void:
 	if _check_cooldown > 0:
