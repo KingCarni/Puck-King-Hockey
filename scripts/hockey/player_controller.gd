@@ -62,6 +62,33 @@ var _charge_fill_material: StandardMaterial3D = null
 
 var _input_source: RefCounted = null
 
+# Runtime stat layer (scripts/roster/player_runtime_stats.gd). The exported
+# properties above are authored baselines and are never mutated by upgrades;
+# when no stats object is attached (legacy scenes) baselines apply unchanged.
+var _runtime_stats: RefCounted = null
+
+func set_runtime_stats(stats: RefCounted) -> void:
+	_runtime_stats = stats
+
+func get_runtime_stats() -> RefCounted:
+	return _runtime_stats
+
+func get_player_definition() -> Resource:
+	if _runtime_stats == null:
+		return null
+	var definition: Variant = _runtime_stats.get("definition")
+	return definition if definition is Resource else null
+
+func get_runtime_stat(stat_id: StringName, node_base: float) -> float:
+	if _runtime_stats != null and _runtime_stats.has_method("get_scaled"):
+		return float(_runtime_stats.call("get_scaled", stat_id, node_base))
+	return node_base
+
+func get_runtime_attribute(attribute_id: StringName, default_value: float = 0.5) -> float:
+	if _runtime_stats != null and _runtime_stats.has_method("get_attribute"):
+		return float(_runtime_stats.call("get_attribute", attribute_id, default_value))
+	return default_value
+
 func _ready() -> void:
 	InputBindings.ensure_player_actions()
 	_input_source = HumanInputSource.new(input_prefix)
@@ -92,8 +119,8 @@ func _physics_process(delta: float) -> void:
 
 	var input_direction: Vector3 = _get_input_direction()
 	var is_sprinting: bool = _input_source.is_sprint_pressed()
-	var target_acceleration: float = sprint_acceleration if is_sprinting else acceleration
-	var target_max_speed: float = sprint_max_speed if is_sprinting else max_speed
+	var target_acceleration: float = get_runtime_stat(&"sprint_acceleration", sprint_acceleration) if is_sprinting else get_runtime_stat(&"acceleration", acceleration)
+	var target_max_speed: float = get_runtime_stat(&"sprint_max_speed", sprint_max_speed) if is_sprinting else get_runtime_stat(&"max_speed", max_speed)
 
 	if input_direction.length_squared() > 0.0:
 		_move_velocity += input_direction * target_acceleration * delta
@@ -152,7 +179,7 @@ func _handle_check_input() -> void:
 		return
 	var facing_direction: Vector3 = _get_facing_direction()
 	_move_velocity += facing_direction * check_lunge_speed
-	_move_velocity = _move_velocity.limit_length(sprint_max_speed + check_lunge_speed * 0.55)
+	_move_velocity = _move_velocity.limit_length(get_runtime_stat(&"sprint_max_speed", sprint_max_speed) + check_lunge_speed * 0.55)
 	_check_active_timer = check_active_seconds
 	_check_cooldown_timer = check_cooldown_seconds
 	_has_hit_during_check = false
@@ -161,6 +188,9 @@ func _update_check_collision() -> void:
 	if _check_active_timer <= 0.0 or _has_hit_during_check:
 		return
 	var facing_direction: Vector3 = _get_facing_direction()
+	var hit_radius: float = get_runtime_stat(&"check_hit_radius", check_hit_radius)
+	var knockback_force: float = get_runtime_stat(&"check_knockback_force", check_knockback_force)
+	var puck_pop_force: float = get_runtime_stat(&"check_puck_force", check_puck_force)
 	var checkable_nodes: Array[Node] = get_tree().get_nodes_in_group("checkable")
 	for checkable_node: Node in checkable_nodes:
 		var target: Node3D = checkable_node as Node3D
@@ -168,7 +198,7 @@ func _update_check_collision() -> void:
 			continue
 		var flat_delta: Vector3 = Vector3(target.global_position.x - global_position.x, 0.0, target.global_position.z - global_position.z)
 		var distance: float = flat_delta.length()
-		if distance > check_hit_radius or distance <= 0.001:
+		if distance > hit_radius or distance <= 0.001:
 			continue
 		var target_direction: Vector3 = flat_delta.normalized()
 		var forward_dot: float = facing_direction.dot(target_direction)
@@ -178,13 +208,13 @@ func _update_check_collision() -> void:
 		if check_freeze_seconds > 0.0:
 			effects["freeze"] = check_freeze_seconds
 		if target.has_method("receive_check"):
-			target.call("receive_check", facing_direction, check_knockback_force, _move_velocity, effects)
+			target.call("receive_check", facing_direction, knockback_force, _move_velocity, effects)
 		if _puck != null and _puck.has_method("poke_free") and _check_should_pop_puck(target):
-			_puck.call("poke_free", facing_direction + target_direction * 0.35, check_puck_force)
+			_puck.call("poke_free", facing_direction + target_direction * 0.35, puck_pop_force)
 		hits_delivered += 1
 		_has_hit_during_check = true
 		_move_velocity = _move_velocity.move_toward(Vector3.ZERO, 2.5)
-		var big_hit: bool = check_knockback_force > 15.0 or _move_velocity.length() > max_speed
+		var big_hit: bool = knockback_force > 15.0 or _move_velocity.length() > max_speed
 		SfxPlayer.play(SfxPlayer.ID_CHECK_HIT, 0.85 if big_hit else 1.05, 2.0 if big_hit else 0.0)
 		get_tree().call_group("game_camera", "add_shake", 0.55 if big_hit else 0.25)
 		_trigger_hit_stop()
@@ -261,11 +291,13 @@ func _try_pass() -> bool:
 	var raw_velocity: Variant = teammate.get("_move_velocity")
 	if raw_velocity is Vector3:
 		teammate_velocity = raw_velocity
-	var lead_target: Vector3 = teammate.global_position + teammate_velocity * 0.30
+	var lead_time: float = lerpf(0.16, 0.44, get_runtime_attribute(&"pass_lead", 0.5))
+	var lead_target: Vector3 = teammate.global_position + teammate_velocity * lead_time
 	var pass_direction: Vector3 = Vector3(lead_target.x - global_position.x, 0.0, lead_target.z - global_position.z)
 	if pass_direction.length_squared() <= 0.001:
 		return false
-	_puck.call("shoot", pass_direction.normalized(), _move_velocity, pass_power)
+	var power_scale: float = lerpf(0.8, 1.2, get_runtime_attribute(&"pass_power", 0.5))
+	_puck.call("shoot", pass_direction.normalized(), _move_velocity, pass_power * power_scale)
 	_cancel_shot_charge()
 	return true
 
@@ -274,7 +306,7 @@ func _update_shot_charge(delta: float) -> void:
 		_is_charging_shot = true
 		_shot_charge_time = 0.0
 	if _is_charging_shot and _input_source.is_shoot_pressed():
-		_shot_charge_time = min(_shot_charge_time + delta, slap_shot_charge_seconds)
+		_shot_charge_time = min(_shot_charge_time + delta, _charge_seconds())
 	if _is_charging_shot and _input_source.is_shoot_just_released():
 		_release_charged_shot()
 		return
@@ -286,7 +318,8 @@ func _release_charged_shot() -> void:
 		_cancel_shot_charge()
 		return
 	var shot_power: float = max(_get_shot_power(), minimum_shot_power)
-	_puck.call("shoot", _get_facing_direction(), _move_velocity, shot_power, shot_speed_scale)
+	var speed_scale: float = shot_speed_scale * get_runtime_attribute(&"shot_power_scale", 1.0)
+	_puck.call("shoot", _get_facing_direction(), _move_velocity, shot_power, speed_scale)
 	_cancel_shot_charge()
 
 func _cancel_shot_charge() -> void:
@@ -294,15 +327,19 @@ func _cancel_shot_charge() -> void:
 	_shot_charge_time = 0.0
 	_update_charge_meter(0.0, false)
 
+func _charge_seconds() -> float:
+	return get_runtime_stat(&"slap_shot_charge_seconds", slap_shot_charge_seconds)
+
 func _get_shot_power() -> float:
-	if slap_shot_charge_seconds <= 0.0:
+	var charge_seconds: float = _charge_seconds()
+	if charge_seconds <= 0.0:
 		return 1.0
-	return clamp(_shot_charge_time / slap_shot_charge_seconds, 0.0, 1.0)
+	return clamp(_shot_charge_time / charge_seconds, 0.0, 1.0)
 
 func _get_puck_carry_position() -> Vector3:
 	var facing_direction: Vector3 = _get_facing_direction()
 	var side_direction: Vector3 = Vector3(facing_direction.z, 0.0, -facing_direction.x).normalized()
-	var target_position: Vector3 = global_position + facing_direction * puck_carry_distance + side_direction * puck_carry_side_offset
+	var target_position: Vector3 = global_position + facing_direction * get_runtime_stat(&"puck_carry_distance", puck_carry_distance) + side_direction * puck_carry_side_offset
 	target_position.y = 0.18
 	return target_position
 

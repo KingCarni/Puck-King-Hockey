@@ -1,17 +1,21 @@
 class_name AbilityCatalog
 extends RefCounted
 
-const AbilityDefinitionScript: GDScript = preload("res://scripts/hockey/abilities/ability_definition.gd")
+# Builds AbilityDefinition instances from reward ids. References the
+# definition script via preload so this never depends on the global class
+# cache being warm.
 
-static func from_reward_id(reward_id: StringName) -> AbilityDefinition:
+const AbilityDefinitionScript = preload("res://scripts/hockey/abilities/ability_definition.gd")
+
+static func from_reward_id(reward_id: StringName) -> RefCounted:
 	match reward_id:
 		&"rocket_skates":
 			return AbilityDefinitionScript.new(
 				&"rocket_skates",
 				"Rocket Skates",
 				"Team skating speed, boost speed, and acceleration increased.",
-				AbilityDefinition.Scope.TEAM,
-				AbilityDefinition.Kind.PASSIVE,
+				AbilityDefinitionScript.Scope.TEAM,
+				AbilityDefinitionScript.Kind.PASSIVE,
 				{
 					&"acceleration_mult": 0.08,
 					&"sprint_acceleration_mult": 0.10,
@@ -25,8 +29,8 @@ static func from_reward_id(reward_id: StringName) -> AbilityDefinition:
 				&"sticky_tape",
 				"Sticky Tape",
 				"Team puck control and pickup reach increased.",
-				AbilityDefinition.Scope.TEAM,
-				AbilityDefinition.Kind.PASSIVE,
+				AbilityDefinitionScript.Scope.TEAM,
+				AbilityDefinitionScript.Kind.PASSIVE,
 				{
 					&"puck_carry_distance_add": 0.18,
 					&"pickup_radius_mult": 0.25,
@@ -39,8 +43,8 @@ static func from_reward_id(reward_id: StringName) -> AbilityDefinition:
 				&"titanium_pads",
 				"Titanium Pads",
 				"Team checking power, range, and puck pop force increased.",
-				AbilityDefinition.Scope.TEAM,
-				AbilityDefinition.Kind.PASSIVE,
+				AbilityDefinitionScript.Scope.TEAM,
+				AbilityDefinitionScript.Kind.PASSIVE,
 				{
 					&"check_knockback_mult": 0.35,
 					&"check_puck_force_mult": 0.25,
@@ -49,11 +53,11 @@ static func from_reward_id(reward_id: StringName) -> AbilityDefinition:
 				3
 			)
 		&"one_timer":
-			return AbilityDefinitionScript.new(&"one_timer", "One-Timer", "Improves one-timer release and power.", AbilityDefinition.Scope.PLAYER, AbilityDefinition.Kind.ACTIVE)
+			return AbilityDefinitionScript.new(&"one_timer", "One-Timer", "Improves one-timer release and power.", AbilityDefinitionScript.Scope.PLAYER, AbilityDefinitionScript.Kind.ACTIVE)
 		&"sniper":
-			return AbilityDefinitionScript.new(&"sniper", "Sniper", "Improves shot accuracy and finishing.", AbilityDefinition.Scope.PLAYER, AbilityDefinition.Kind.ACTIVE)
+			return AbilityDefinitionScript.new(&"sniper", "Sniper", "Improves shot accuracy and finishing.", AbilityDefinitionScript.Scope.PLAYER, AbilityDefinitionScript.Kind.ACTIVE)
 		&"body_check_plus":
-			return AbilityDefinitionScript.new(&"body_check_plus", "Body Check+", "Improves this player's checking impact.", AbilityDefinition.Scope.PLAYER, AbilityDefinition.Kind.ACTIVE)
+			return AbilityDefinitionScript.new(&"body_check_plus", "Body Check+", "Improves this player's checking impact.", AbilityDefinitionScript.Scope.PLAYER, AbilityDefinitionScript.Kind.ACTIVE)
 	return null
 
 static func team_reward_ids() -> Array[StringName]:

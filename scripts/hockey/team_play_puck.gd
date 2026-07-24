@@ -96,4 +96,8 @@ func _best_pickup_candidate() -> Node3D:
 
 func _within_pickup_radius(player: Node3D) -> bool:
 	var delta: Vector3 = Vector3(global_position.x - player.global_position.x, 0.0, global_position.z - player.global_position.z)
-	return delta.length() <= pickup_radius
+	var radius: float = pickup_radius
+	# Per-player pickup reach through the runtime stat layer (e.g. Sticky Tape).
+	if player.has_method("get_runtime_stat"):
+		radius *= float(player.call("get_runtime_stat", &"pickup_radius_scale", 1.0))
+	return delta.length() <= radius

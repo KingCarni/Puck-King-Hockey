@@ -39,8 +39,8 @@ func _update_human(delta: float) -> void:
 	if move.length_squared() > 0.01:
 		var desired: Vector3 = Vector3(move.x, 0.0, move.y).normalized()
 		var sprinting: bool = _human_input.is_sprint_pressed()
-		var accel: float = sprint_acceleration if sprinting else acceleration
-		var top: float = sprint_max_speed if sprinting else max_speed
+		var accel: float = get_runtime_stat(&"sprint_acceleration", sprint_acceleration) if sprinting else get_runtime_stat(&"acceleration", acceleration)
+		var top: float = get_runtime_stat(&"sprint_max_speed", sprint_max_speed) if sprinting else get_runtime_stat(&"max_speed", max_speed)
 		_move_velocity += desired * accel * delta
 		_move_velocity = _move_velocity.limit_length(top)
 		_last_facing_direction = desired
@@ -62,7 +62,7 @@ func _update_human(delta: float) -> void:
 		_pass_charge = 0.0
 
 	if _possesses(self) and _human_input.is_shoot_just_released():
-		_puck.call("shoot", _get_facing_direction(), _move_velocity, 0.55)
+		_puck.call("shoot", _get_facing_direction(), _move_velocity, 0.55, get_runtime_attribute(&"shot_power_scale", 1.0))
 
 func _human_prefix() -> String:
 	return "p1" if attack_direction > 0.0 else "p2"

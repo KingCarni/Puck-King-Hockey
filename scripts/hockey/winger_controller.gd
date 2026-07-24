@@ -65,6 +65,11 @@ var _enemy_center: Node3D = null
 var _enemy_winger: Node3D = null
 var _enemy_goalie: Node3D = null
 
+# Runtime stat layer (scripts/roster/player_runtime_stats.gd). The exported
+# properties above are authored baselines and are never mutated by upgrades;
+# when no stats object is attached (legacy scenes) baselines apply unchanged.
+var _runtime_stats: RefCounted = null
+
 var _base_material: StandardMaterial3D = null
 var _stun_material: StandardMaterial3D = null
 var _freeze_material: StandardMaterial3D = null
@@ -84,6 +89,28 @@ func _ready() -> void:
 	_enemy_winger = get_node_or_null(enemy_winger_path) as Node3D
 	_enemy_goalie = get_node_or_null(enemy_goalie_path) as Node3D
 	_last_facing_direction = Vector3(attack_direction, 0.0, 0.0)
+
+func set_runtime_stats(stats: RefCounted) -> void:
+	_runtime_stats = stats
+
+func get_runtime_stats() -> RefCounted:
+	return _runtime_stats
+
+func get_player_definition() -> Resource:
+	if _runtime_stats == null:
+		return null
+	var definition: Variant = _runtime_stats.get("definition")
+	return definition if definition is Resource else null
+
+func get_runtime_stat(stat_id: StringName, node_base: float) -> float:
+	if _runtime_stats != null and _runtime_stats.has_method("get_scaled"):
+		return float(_runtime_stats.call("get_scaled", stat_id, node_base))
+	return node_base
+
+func get_runtime_attribute(attribute_id: StringName, default_value: float = 0.5) -> float:
+	if _runtime_stats != null and _runtime_stats.has_method("get_attribute"):
+		return float(_runtime_stats.call("get_attribute", attribute_id, default_value))
+	return default_value
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
@@ -136,7 +163,7 @@ func _attack(delta: float) -> void:
 		var aim: Vector3 = _pick_shot_target()
 		var aim_direction: Vector3 = (aim - global_position).normalized()
 		if _get_facing_direction().dot(aim_direction) > 0.45:
-			_puck.call("shoot", aim_direction, _move_velocity, shot_power)
+			_puck.call("shoot", aim_direction, _move_velocity, shot_power, get_runtime_attribute(&"shot_power_scale", 1.0))
 			_shoot_cooldown_timer = shoot_cooldown_seconds
 			return
 		# Not lined up yet: curl toward the shooting angle.
@@ -289,11 +316,13 @@ func _pass_to(target: Node3D) -> void:
 	var raw_velocity: Variant = target.get("_move_velocity")
 	if raw_velocity is Vector3:
 		target_velocity = raw_velocity
-	var lead: Vector3 = target.global_position + target_velocity * 0.28
+	var lead_time: float = lerpf(0.14, 0.42, get_runtime_attribute(&"pass_lead", 0.5))
+	var lead: Vector3 = target.global_position + target_velocity * lead_time
 	var direction: Vector3 = Vector3(lead.x - global_position.x, 0.0, lead.z - global_position.z)
 	if direction.length_squared() <= 0.001:
 		return
-	_puck.call("shoot", direction.normalized(), _move_velocity, pass_power)
+	var power_scale: float = lerpf(0.8, 1.2, get_runtime_attribute(&"pass_power", 0.5))
+	_puck.call("shoot", direction.normalized(), _move_velocity, pass_power * power_scale)
 	_pass_cooldown_timer = pass_cooldown_seconds
 
 # ---------- movement + physics ----------
@@ -304,8 +333,8 @@ func _skate_toward(target_position: Vector3, delta: float, sprinting: bool) -> v
 		_apply_friction(delta)
 		return
 	var desired: Vector3 = flat_delta.normalized()
-	var accel: float = sprint_acceleration if sprinting else acceleration
-	var top: float = sprint_max_speed if sprinting else max_speed
+	var accel: float = get_runtime_stat(&"sprint_acceleration", sprint_acceleration) if sprinting else get_runtime_stat(&"acceleration", acceleration)
+	var top: float = get_runtime_stat(&"sprint_max_speed", sprint_max_speed) if sprinting else get_runtime_stat(&"max_speed", max_speed)
 	_move_velocity += desired * accel * delta
 	_move_velocity = _move_velocity.limit_length(top)
 	_last_facing_direction = desired
@@ -408,7 +437,7 @@ func _clamp_to_play_area(point: Vector3) -> Vector3:
 func _get_puck_carry_position() -> Vector3:
 	var facing: Vector3 = _get_facing_direction()
 	var side: Vector3 = Vector3(facing.z, 0.0, -facing.x).normalized()
-	var target: Vector3 = global_position + facing * puck_carry_distance + side * puck_carry_side_offset
+	var target: Vector3 = global_position + facing * get_runtime_stat(&"puck_carry_distance", puck_carry_distance) + side * puck_carry_side_offset
 	target.y = PUCK_Y
 	return target
 

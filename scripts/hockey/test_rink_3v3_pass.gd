@@ -3,6 +3,9 @@ extends "res://scripts/hockey/test_rink_gameplay_pass.gd"
 const TeamPlayManagerScript: GDScript = preload("res://scripts/hockey/team_play_manager.gd")
 const AbilityCatalogScript: GDScript = preload("res://scripts/hockey/abilities/ability_catalog.gd")
 const MatchAbilityStateScript: GDScript = preload("res://scripts/hockey/abilities/match_ability_state.gd")
+const AbilityDefinitionScript: GDScript = preload("res://scripts/hockey/abilities/ability_definition.gd")
+const MatchRosterScript: GDScript = preload("res://scripts/roster/match_roster.gd")
+const RosterCatalogScript: GDScript = preload("res://scripts/roster/roster_catalog.gd")
 
 const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3.ONE
 const THREE_V_THREE_HOME_GOAL_X: float = 22.65
@@ -14,9 +17,9 @@ var _home_winger2: Node3D = null
 var _away_winger2: Node3D = null
 var _team_play_manager: Node = null
 var _team_indicators: Node = null
-var _ability_state: MatchAbilityState = MatchAbilityStateScript.new()
+var _ability_state: RefCounted = MatchAbilityStateScript.new()
+var _match_roster: RefCounted = MatchRosterScript.new()
 var _pending_reward_team: StringName = &"HOME"
-var _base_skater_stats: Dictionary = {}
 
 func _ready() -> void:
 	super._ready()
@@ -32,12 +35,26 @@ func _ready() -> void:
 	_update_upgrade_display()
 
 func _setup_match_abilities() -> void:
+	_match_roster.setup(_ability_state)
 	for player: Node3D in _team_players(&"HOME"):
 		_ability_state.register_player(&"HOME", player)
-		_capture_base_stats(player)
 	for player: Node3D in _team_players(&"AWAY"):
 		_ability_state.register_player(&"AWAY", player)
-		_capture_base_stats(player)
+	_assign_roster_definitions()
+
+# Named characters for the current 3v3 scene. Duane runs the top line as the
+# default-controlled center; Gronk anchors the left wing as the heavy hitter.
+# Every node without a named definition gets a neutral fallback, so the scene
+# keeps playing exactly as authored while the roster migrates incrementally.
+func _assign_roster_definitions() -> void:
+	if _player != null:
+		_match_roster.assign(_player, &"HOME", RosterCatalogScript.find(&"duane_clutzky"))
+	if _home_teammate != null:
+		_match_roster.assign(_home_teammate, &"HOME", RosterCatalogScript.find(&"gronk_mckrunk"))
+	for player: Node3D in _team_players(&"HOME"):
+		_match_roster.ensure_assigned(player, &"HOME")
+	for player: Node3D in _team_players(&"AWAY"):
+		_match_roster.ensure_assigned(player, &"AWAY")
 
 func _setup_team_play() -> void:
 	_team_play_manager = Node.new()
@@ -101,7 +118,7 @@ func _award_cpu_team_upgrade(side: StringName) -> void:
 	var reward_ids: Array[StringName] = AbilityCatalogScript.team_reward_ids()
 	if reward_ids.is_empty():
 		return
-	var ability: AbilityDefinition = AbilityCatalogScript.from_reward_id(reward_ids[randi() % reward_ids.size()])
+	var ability: RefCounted = AbilityCatalogScript.from_reward_id(reward_ids[randi() % reward_ids.size()])
 	if ability != null and _ability_state.add_ability(side, ability):
 		_refresh_team_stats(side)
 
@@ -109,7 +126,7 @@ func _on_reward_selected(index: int, upgrade_id: String) -> void:
 	if index < 0 or index >= _reward_options.size():
 		return
 	var option: Dictionary = _reward_options[index]
-	var ability: AbilityDefinition = AbilityCatalogScript.from_reward_id(StringName(upgrade_id))
+	var ability: RefCounted = AbilityCatalogScript.from_reward_id(StringName(upgrade_id))
 	if ability == null or not _ability_state.add_ability(_pending_reward_team, ability):
 		return
 	_selected_upgrades.append(option)
@@ -126,37 +143,11 @@ func _on_reward_selected(index: int, upgrade_id: String) -> void:
 	if _match_clock != null:
 		_match_clock.resume()
 
-func _capture_base_stats(player: Node3D) -> void:
-	if player == null or _base_skater_stats.has(player.get_instance_id()):
-		return
-	var stats: Dictionary = {}
-	for property_name: StringName in [&"acceleration", &"sprint_acceleration", &"max_speed", &"sprint_max_speed", &"puck_carry_distance", &"check_knockback_force", &"check_puck_force", &"check_hit_radius"]:
-		var value: Variant = player.get(property_name)
-		if value != null:
-			stats[property_name] = float(value)
-	_base_skater_stats[player.get_instance_id()] = stats
-
+# Abilities no longer mutate controller properties. Controllers read layered
+# runtime stats (roster/player_runtime_stats.gd); earning an ability only
+# invalidates that team's cached values so the next read recomputes.
 func _refresh_team_stats(side: StringName) -> void:
-	var team_state: TeamAbilityState = _ability_state.team(side)
-	for player: Node3D in _team_players(side):
-		_capture_base_stats(player)
-		var base: Dictionary = _base_skater_stats.get(player.get_instance_id(), {})
-		_set_scaled_stat(player, base, &"acceleration", 1.0 + team_state.get_combined_modifier(player, &"acceleration_mult"))
-		_set_scaled_stat(player, base, &"sprint_acceleration", 1.0 + team_state.get_combined_modifier(player, &"sprint_acceleration_mult"))
-		_set_scaled_stat(player, base, &"max_speed", 1.0 + team_state.get_combined_modifier(player, &"max_speed_mult"))
-		_set_scaled_stat(player, base, &"sprint_max_speed", 1.0 + team_state.get_combined_modifier(player, &"sprint_max_speed_mult"))
-		_set_scaled_stat(player, base, &"check_knockback_force", 1.0 + team_state.get_combined_modifier(player, &"check_knockback_mult"))
-		_set_scaled_stat(player, base, &"check_puck_force", 1.0 + team_state.get_combined_modifier(player, &"check_puck_force_mult"))
-		_set_added_stat(player, base, &"puck_carry_distance", team_state.get_combined_modifier(player, &"puck_carry_distance_add"))
-		_set_added_stat(player, base, &"check_hit_radius", team_state.get_combined_modifier(player, &"check_hit_radius_add"))
-
-func _set_scaled_stat(player: Node3D, base: Dictionary, property_name: StringName, multiplier: float) -> void:
-	if base.has(property_name):
-		player.set(property_name, float(base[property_name]) * multiplier)
-
-func _set_added_stat(player: Node3D, base: Dictionary, property_name: StringName, addition: float) -> void:
-	if base.has(property_name):
-		player.set(property_name, float(base[property_name]) + addition)
+	_match_roster.invalidate_side(side)
 
 func _update_upgrade_display() -> void:
 	if _hud == null or _ability_state == null:
@@ -164,8 +155,8 @@ func _update_upgrade_display() -> void:
 	var display_entries: Array[Dictionary] = []
 	var side: StringName = StringName(_control_side)
 	for raw_entry: Dictionary in _ability_state.team(side).get_team_ability_entries():
-		var definition: AbilityDefinition = raw_entry.get("definition") as AbilityDefinition
-		if definition == null:
+		var definition: Variant = raw_entry.get("definition")
+		if not (definition is AbilityDefinitionScript):
 			continue
 		var stacks: int = int(raw_entry.get("stacks", 1))
 		display_entries.append({
@@ -290,6 +281,10 @@ func _sort_star_candidates(a: Dictionary, b: Dictionary) -> bool:
 	return float(a.get("score", 0.0)) > float(b.get("score", 0.0))
 
 func _display_name(node: Node3D) -> String:
+	# Named characters show their roster identity (scoreboard, three stars).
+	var roster_name: String = _match_roster.display_name_for(node)
+	if roster_name != "":
+		return roster_name.to_upper()
 	match node.name:
 		&"HomeTeammate2": return "HOME RIGHT WING"
 		&"AwayTeammate2": return "AWAY RIGHT WING"

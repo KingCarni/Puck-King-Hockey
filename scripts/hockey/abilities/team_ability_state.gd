@@ -5,6 +5,11 @@ extends RefCounted
 # Team abilities apply to every skater on the team. Player abilities are stored
 # against a stable player key so changing the controlled skater does not move or
 # remove that player's abilities.
+#
+# Ability arguments are AbilityDefinition instances, referenced via preload so
+# resolution never depends on the global class cache.
+
+const AbilityDefinitionScript = preload("res://scripts/hockey/abilities/ability_definition.gd")
 
 var team_id: StringName
 var team_abilities: Dictionary = {}
@@ -27,7 +32,7 @@ func unregister_player(player: Node3D) -> void:
 		return
 	registered_players.erase(_player_key(player))
 
-func add_ability(ability: AbilityDefinition, player: Node3D = null) -> bool:
+func add_ability(ability: RefCounted, player: Node3D = null) -> bool:
 	if ability == null:
 		return false
 	if ability.is_team_ability():
@@ -93,7 +98,7 @@ func to_dictionary() -> Dictionary:
 		"player_abilities": players_snapshot,
 	}
 
-func _add_stack(store: Dictionary, ability: AbilityDefinition) -> bool:
+func _add_stack(store: Dictionary, ability: RefCounted) -> bool:
 	var entry: Dictionary = store.get(ability.id, {
 		"definition": ability,
 		"stacks": 0,
@@ -112,11 +117,11 @@ func _sum_modifier(store: Dictionary, modifier_id: StringName) -> float:
 		if not (raw_entry is Dictionary):
 			continue
 		var entry: Dictionary = raw_entry
-		var ability: AbilityDefinition = entry.get("definition") as AbilityDefinition
-		if ability == null:
+		var ability: Variant = entry.get("definition")
+		if not (ability is AbilityDefinitionScript):
 			continue
 		var stacks: int = int(entry.get("stacks", 0))
-		total += ability.get_modifier(modifier_id) * float(stacks)
+		total += float(ability.get_modifier(modifier_id)) * float(stacks)
 	return total
 
 func _entries_from_store(store: Dictionary) -> Array[Dictionary]:
@@ -132,9 +137,10 @@ func _copy_store(store: Dictionary) -> Dictionary:
 		var raw_entry: Variant = store[ability_id]
 		if raw_entry is Dictionary:
 			var entry: Dictionary = raw_entry
-			var ability: AbilityDefinition = entry.get("definition") as AbilityDefinition
+			var ability: Variant = entry.get("definition")
+			var has_definition: bool = ability is AbilityDefinitionScript
 			result[ability_id] = {
-				"definition": ability.to_dictionary() if ability != null else {},
+				"definition": ability.to_dictionary() if has_definition else {},
 				"stacks": int(entry.get("stacks", 0)),
 			}
 	return result

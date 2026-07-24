@@ -78,21 +78,36 @@ func request_pass(requester: Node3D) -> bool:
 	var raw_velocity: Variant = requester.get("_move_velocity")
 	if raw_velocity is Vector3:
 		velocity = raw_velocity
-	var lead: Vector3 = requester.global_position + velocity * 0.32
+	# The current carrier makes the pass, so their attributes shape it.
+	var lead_time: float = lerpf(0.16, 0.46, _attribute_of(owner, &"pass_lead", 0.5))
+	var lead: Vector3 = requester.global_position + velocity * lead_time
 	var direction: Vector3 = lead - owner.global_position
 	direction.y = 0.0
 	if direction.length_squared() < 0.01:
 		return false
-	puck.call("shoot", direction.normalized(), Vector3.ZERO, 0.38)
+	var pass_speed: float = 0.38 * lerpf(0.82, 1.22, _attribute_of(owner, &"pass_power", 0.5))
+	puck.call("shoot", direction.normalized(), Vector3.ZERO, pass_speed)
+	if puck.has_method("set_receiver_priority"):
+		puck.call("set_receiver_priority", requester, owner, lerpf(0.25, 0.60, _attribute_of(owner, &"pass_assist", 0.5)))
 	_call_timer = call_cooldown
 	emit_signal("call_acknowledged", owner)
 	return true
 
+# Passing is assisted, scaled by the passer's attributes:
+#   pass_assist   — how reliably a receiver is acquired off-axis from raw aim
+#   pass_accuracy — how strongly the pass direction corrects onto the receiver
+#   pass_lead     — how well the pass leads a moving receiver
+#   pass_power    — pass speed
+# A low-passing skater mostly shoots where they aim; a playmaker finds tape.
 func choose_pass_target(from_player: Node3D, aim: Vector3) -> Node3D:
 	var candidates: Array[Node3D] = _controlled_team()
 	var best: Node3D = null
 	var best_score: float = -INF
 	var facing: Vector3 = aim.normalized() if aim.length_squared() > 0.01 else Vector3.RIGHT
+	var assist: float = _attribute_of(from_player, &"pass_assist", 0.5)
+	# Low assist demands aiming nearly at the receiver; high assist widens the
+	# acquisition cone. Raw aim always matters — the cone never goes behind.
+	var minimum_dot: float = lerpf(0.55, 0.05, clampf(assist, 0.0, 1.0))
 	for candidate: Node3D in candidates:
 		if candidate == null or candidate == from_player:
 			continue
@@ -100,7 +115,12 @@ func choose_pass_target(from_player: Node3D, aim: Vector3) -> Node3D:
 		delta.y = 0.0
 		if delta.length_squared() < 0.01:
 			continue
-		var score: float = facing.dot(delta.normalized()) * 3.0 - delta.length() * 0.03
+		var aim_dot: float = facing.dot(delta.normalized())
+		if aim_dot < minimum_dot:
+			continue
+		var score: float = aim_dot * lerpf(1.8, 3.4, assist) - delta.length() * lerpf(0.055, 0.020, assist)
+		if _lane_clear(from_player.global_position, candidate.global_position):
+			score += lerpf(0.0, 0.9, assist)
 		if score > best_score:
 			best_score = score
 			best = candidate
@@ -109,17 +129,39 @@ func choose_pass_target(from_player: Node3D, aim: Vector3) -> Node3D:
 func execute_pass(from_player: Node3D, aim: Vector3, charge: float) -> bool:
 	if puck == null or not bool(puck.call("is_possessed_by", from_player)):
 		return false
+	var clamped_charge: float = clampf(charge, 0.0, 1.0)
+	var raw_aim: Vector3 = Vector3(aim.x, 0.0, aim.z)
+	raw_aim = raw_aim.normalized() if raw_aim.length_squared() > 0.001 else Vector3.RIGHT
+	var power_attribute: float = _attribute_of(from_player, &"pass_power", 0.5)
+	var pass_speed: float = lerpf(0.22, 0.58, clamped_charge) * lerpf(0.82, 1.22, power_attribute)
 	var target: Node3D = choose_pass_target(from_player, aim)
 	if target == null:
-		return false
+		# No receiver in the cone: the pass follows the raw aim ("hope pass").
+		puck.call("shoot", raw_aim, Vector3.ZERO, pass_speed * 0.9)
+		return true
+	var lead_attribute: float = _attribute_of(from_player, &"pass_lead", 0.5)
 	var target_velocity: Vector3 = Vector3.ZERO
 	var raw_velocity: Variant = target.get("_move_velocity")
 	if raw_velocity is Vector3:
 		target_velocity = raw_velocity
-	var lead: Vector3 = target.global_position + target_velocity * lerpf(0.18, 0.42, clampf(charge, 0.0, 1.0))
-	var direction: Vector3 = lead - from_player.global_position
-	direction.y = 0.0
-	puck.call("shoot", direction.normalized(), Vector3.ZERO, lerpf(0.22, 0.58, clampf(charge, 0.0, 1.0)))
+	var lead_time: float = lerpf(0.08, 0.50, lead_attribute) * lerpf(0.65, 1.0, clamped_charge)
+	var lead: Vector3 = target.global_position + target_velocity * lead_time
+	var to_receiver: Vector3 = lead - from_player.global_position
+	to_receiver.y = 0.0
+	if to_receiver.length_squared() < 0.001:
+		return false
+	to_receiver = to_receiver.normalized()
+	# Blend raw stick aim toward the receiver: accuracy decides how much the
+	# pass corrects onto the tape versus following the player's input.
+	var accuracy: float = _attribute_of(from_player, &"pass_accuracy", 0.5)
+	var correction: float = lerpf(0.35, 0.95, accuracy)
+	var direction: Vector3 = raw_aim.lerp(to_receiver, correction)
+	if direction.length_squared() < 0.001:
+		direction = to_receiver
+	puck.call("shoot", direction.normalized(), Vector3.ZERO, pass_speed)
+	if puck.has_method("set_receiver_priority"):
+		var assist: float = _attribute_of(from_player, &"pass_assist", 0.5)
+		puck.call("set_receiver_priority", target, from_player, lerpf(0.25, 0.60, assist))
 	return true
 
 func _set_controlled_player(player: Node3D) -> void:
@@ -163,6 +205,13 @@ func _get_puck_owner() -> Node3D:
 		return null
 	var owner: Variant = puck.get("_owner")
 	return owner as Node3D if owner is Node3D else null
+
+## Reads a runtime attribute off a skater (roster stat layer), falling back
+## to the league-average default for unmigrated controllers.
+func _attribute_of(player: Node3D, attribute_id: StringName, default_value: float) -> float:
+	if player != null and player.has_method("get_runtime_attribute"):
+		return float(player.call("get_runtime_attribute", attribute_id, default_value))
+	return default_value
 
 func _controlled_team() -> Array[Node3D]:
 	if control_side == "HOME":
