@@ -6,6 +6,7 @@ const MatchAbilityStateScript: GDScript = preload("res://scripts/hockey/abilitie
 const AbilityDefinitionScript: GDScript = preload("res://scripts/hockey/abilities/ability_definition.gd")
 const MatchRosterScript: GDScript = preload("res://scripts/roster/match_roster.gd")
 const RosterCatalogScript: GDScript = preload("res://scripts/roster/roster_catalog.gd")
+const PlayerNameLabelsScript: GDScript = preload("res://scripts/hockey/player_name_labels.gd")
 
 const THREE_V_THREE_RINK_SCALE: Vector3 = Vector3.ONE
 const THREE_V_THREE_HOME_GOAL_X: float = 22.65
@@ -17,6 +18,7 @@ var _home_winger2: Node3D = null
 var _away_winger2: Node3D = null
 var _team_play_manager: Node = null
 var _team_indicators: Node = null
+var _player_name_labels: Node3D = null
 var _ability_state: RefCounted = MatchAbilityStateScript.new()
 var _match_roster: RefCounted = MatchRosterScript.new()
 var _pending_reward_team: StringName = &"HOME"
@@ -30,6 +32,7 @@ func _ready() -> void:
 		_collision_manager.call("setup", _get_collision_bodies())
 	_setup_team_play()
 	_setup_match_abilities()
+	_setup_player_name_labels()
 	if _match_clock != null and _match_clock.has_signal("intermission_started"):
 		_match_clock.connect("intermission_started", _on_intermission_started)
 	_update_upgrade_display()
@@ -55,6 +58,21 @@ func _assign_roster_definitions() -> void:
 		_match_roster.ensure_assigned(player, &"HOME")
 	for player: Node3D in _team_players(&"AWAY"):
 		_match_roster.ensure_assigned(player, &"AWAY")
+
+func _setup_player_name_labels() -> void:
+	_player_name_labels = Node3D.new()
+	_player_name_labels.name = "PlayerNameLabels"
+	_player_name_labels.set_script(PlayerNameLabelsScript)
+	add_child(_player_name_labels)
+	var all_players: Array[Node3D] = []
+	all_players.append_array(_team_players(&"HOME"))
+	all_players.append_array(_team_players(&"AWAY"))
+	_player_name_labels.call("setup", all_players, _match_roster)
+	if _team_play_manager != null:
+		_team_play_manager.connect("controlled_player_changed", Callable(_player_name_labels, "set_controlled_player"))
+		var controlled: Variant = _team_play_manager.get("controlled_player")
+		if controlled is Node3D:
+			_player_name_labels.call("set_controlled_player", controlled)
 
 func _setup_team_play() -> void:
 	_team_play_manager = Node.new()
@@ -256,54 +274,13 @@ func _compute_three_stars() -> Array:
 			continue
 		var display: String = _display_name(skater)
 		var goals: int = int(_goal_stats.get(display, {}).get("goals", 0))
-		var hits_value = skater.get("hits_delivered")
-		var hits: int = int(hits_value) if hits_value != null else 0
-		var score: float = goals * 3.0 + hits * 0.75
-		candidates.append({"name": display, "score": score, "line": "%d G · %d HIT" % [goals, hits]})
-	var goalies: Array = [_home_goalie, _away_goalie]
-	for goalie in goalies:
-		if not (goalie is Node3D):
-			continue
-		var saves_value = goalie.get("saves_made")
-		var saves: int = int(saves_value) if saves_value != null else 0
-		candidates.append({"name": _display_name(goalie), "score": saves * 0.85, "line": "%d SAVES" % saves})
-	candidates.sort_custom(_sort_star_candidates)
-	var stars: Array = []
-	var glyphs: Array = ["★", "★★", "★★★"]
-	for index in range(mini(3, candidates.size())):
-		var entry: Dictionary = candidates[index]
-		stars.append("%s  %s — %s" % [glyphs[index], String(entry["name"]), String(entry["line"])])
-	if not stars.is_empty():
-		stars[0] = "MVP " + String(stars[0])
-	return stars
+		candidates.append({"name": display, "goals": goals})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["goals"]) > int(b["goals"]))
+	return candidates.slice(0, 3)
 
-func _sort_star_candidates(a: Dictionary, b: Dictionary) -> bool:
-	return float(a.get("score", 0.0)) > float(b.get("score", 0.0))
-
-func _display_name(node: Node3D) -> String:
-	# Named characters show their roster identity (scoreboard, three stars).
-	var roster_name: String = _match_roster.display_name_for(node)
-	if roster_name != "":
-		return roster_name.to_upper()
-	match node.name:
-		&"HomeTeammate2": return "HOME RIGHT WING"
-		&"AwayTeammate2": return "AWAY RIGHT WING"
-		&"HomeTeammate": return "HOME LEFT WING"
-		&"AwayTeammate": return "AWAY LEFT WING"
-	return super._display_name(node)
-
-func _credit_goal_scorer(team: String) -> void:
-	if _puck == null or not _puck.has_method("get_last_toucher"):
-		return
-	var scorer = _puck.call("get_last_toucher")
-	if not (scorer is Node3D):
-		return
-	var home_scorers: Array = [&"Player", &"HomeTeammate", &"HomeTeammate2"]
-	var away_scorers: Array = [&"Player2", &"AwayTeammate", &"AwayTeammate2"]
-	var valid: bool = (team == "HOME" and scorer.name in home_scorers) or (team == "AWAY" and scorer.name in away_scorers)
-	if not valid:
-		return
-	var display: String = _display_name(scorer)
-	var entry: Dictionary = _goal_stats.get(display, {"goals": 0})
-	entry["goals"] = int(entry["goals"]) + 1
-	_goal_stats[display] = entry
+func _display_name(skater: Node3D) -> String:
+	if _match_roster != null:
+		var roster_name: String = _match_roster.display_name_for(skater)
+		if not roster_name.is_empty():
+			return roster_name
+	return String(skater.name).replace("_", " ").to_upper()
