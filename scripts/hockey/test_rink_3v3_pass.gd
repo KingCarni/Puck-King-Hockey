@@ -27,8 +27,14 @@ func _setup_team_play() -> void:
 	_team_play_manager.name = "TeamPlayManager"
 	_team_play_manager.set_script(TeamPlayManagerScript)
 	add_child(_team_play_manager)
-	var home: Array = [_player, _home_teammate, _home_winger2]
-	var away: Array = [_away_skater, _away_teammate, _away_winger2]
+	var home: Array[Node3D] = []
+	var away: Array[Node3D] = []
+	for player in [_player, _home_teammate, _home_winger2]:
+		if player is Node3D:
+			home.append(player)
+	for player in [_away_skater, _away_teammate, _away_winger2]:
+		if player is Node3D:
+			away.append(player)
 	_team_play_manager.call("setup", _puck, home, away, _control_side)
 	_team_indicators = get_node_or_null("PossessionIndicators")
 	if _team_indicators != null:
@@ -57,8 +63,8 @@ func _build_collision_manager() -> void:
 	add_child(_collision_manager)
 	_collision_manager.call("setup", _get_collision_bodies())
 
-func _get_collision_bodies() -> Array:
-	var bodies: Array = []
+func _get_collision_bodies() -> Array[Node3D]:
+	var bodies: Array[Node3D] = []
 	var candidates: Array = [
 		_player,
 		_away_skater,
