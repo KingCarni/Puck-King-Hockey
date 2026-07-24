@@ -11,6 +11,7 @@ extends Node3D
 @export var max_position_push: float = 0.46
 @export var hard_overlap_threshold: float = 0.42
 @export var hard_overlap_hit_force: float = 9.0
+@export var behind_net_clearance: float = 0.32
 
 var _bodies: Array[Node3D] = []
 
@@ -34,6 +35,8 @@ func _physics_process(delta: float) -> void:
 			_separate_pair(a, b, delta)
 
 func _separate_pair(a: Node3D, b: Node3D, delta: float) -> void:
+	if _is_behind_goalie(a, b) or _is_behind_goalie(b, a):
+		return
 	var flat_delta: Vector3 = Vector3(b.global_position.x - a.global_position.x, 0.0, b.global_position.z - a.global_position.z)
 	var distance: float = flat_delta.length()
 	if distance <= 0.001:
@@ -64,6 +67,14 @@ func _separate_pair(a: Node3D, b: Node3D, delta: float) -> void:
 	if overlap >= hard_overlap_threshold and not (_is_goalie(a) or _is_goalie(b)):
 		_apply_soft_check(a, -normal, overlap)
 		_apply_soft_check(b, normal, overlap)
+
+func _is_behind_goalie(skater: Node3D, goalie: Node3D) -> bool:
+	if _is_goalie(skater) or not _is_goalie(goalie):
+		return false
+	var goalie_side: float = signf(goalie.global_position.x)
+	if goalie_side == 0.0:
+		return false
+	return skater.global_position.x * goalie_side > goalie.global_position.x * goalie_side + behind_net_clearance
 
 func _fallback_normal(a: Node3D, b: Node3D) -> Vector3:
 	var seed: float = float(a.get_instance_id() % 17 - b.get_instance_id() % 13)
