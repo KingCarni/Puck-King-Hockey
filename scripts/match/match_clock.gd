@@ -6,10 +6,11 @@ class_name MatchClock
 
 signal time_changed(seconds_left: float, period_index: int, period_label: String)
 signal period_changed(period_index: int, period_label: String, is_overtime: bool)
+signal intermission_started(completed_period_index: int, next_period_index: int)
 signal match_started(preset: Dictionary)
 signal match_ended(winner: String, home_score: int, away_score: int)
 
-const INTERMISSION_TICK: float = 0.0  # No intermission for now — could add later.
+const INTERMISSION_SECONDS: float = 2.25
 
 var preset: Dictionary = {}
 var period_count: int = 3
@@ -24,15 +25,15 @@ var time_left: float = 0.0
 var is_running: bool = false
 var is_overtime: bool = false
 var match_over: bool = false
+var is_intermission: bool = false
 
 var _home_score: int = 0
 var _away_score: int = 0
 
 func _process(delta: float) -> void:
-	if not is_running or match_over:
+	if not is_running or match_over or is_intermission:
 		return
 	if period_seconds <= 0.0 and not is_overtime:
-		# Untimed mode (e.g. sudden death without overtime tick).
 		return
 	time_left = max(time_left - delta, 0.0)
 	emit_signal("time_changed", time_left, period_index, _period_label())
@@ -47,15 +48,14 @@ func start_match(match_preset: Dictionary) -> void:
 	first_to_goals = int(preset.get("first_to_goals", 0))
 	mercy_diff = int(preset.get("mercy_diff", 0))
 	overtime_enabled = bool(preset.get("overtime", false))
-
 	period_index = 0
 	time_left = period_seconds
 	is_running = true
 	is_overtime = false
+	is_intermission = false
 	match_over = false
 	_home_score = 0
 	_away_score = 0
-
 	emit_signal("match_started", preset)
 	emit_signal("period_changed", period_index, _period_label(), false)
 	emit_signal("time_changed", time_left, period_index, _period_label())
@@ -64,38 +64,26 @@ func stop() -> void:
 	is_running = false
 
 func resume() -> void:
-	if not match_over:
+	if not match_over and not is_intermission:
 		is_running = true
 
 func register_goal(team: String) -> bool:
-	# Returns true if the match should now end.
 	if team == "HOME":
 		_home_score += 1
 	else:
 		_away_score += 1
-
 	if match_over:
 		return true
-
-	# First-to-N or sudden-death victory.
 	if win_condition == "first_to" or win_condition == "sudden_death":
-		if first_to_goals > 0:
-			if _home_score >= first_to_goals or _away_score >= first_to_goals:
-				_end_match()
-				return true
-
-	# Sudden-death overtime: any goal ends it.
+		if first_to_goals > 0 and (_home_score >= first_to_goals or _away_score >= first_to_goals):
+			_end_match()
+			return true
 	if is_overtime:
 		_end_match()
 		return true
-
-	# Mercy rule.
 	if mercy_diff > 0 and abs(_home_score - _away_score) >= mercy_diff and period_index >= period_count - 1:
-		# Only trigger mercy in the final period or later.
-		if period_index >= period_count - 1:
-			_end_match()
-			return true
-
+		_end_match()
+		return true
 	return false
 
 func get_home_score() -> int:
@@ -118,31 +106,38 @@ func _period_label() -> String:
 	return MatchPreset.ordinal_period(period_index)
 
 func _on_period_end() -> void:
+	if match_over or is_intermission:
+		return
+	is_running = false
+	if period_index + 1 < period_count:
+		_begin_intermission(period_index + 1, false)
+		return
+	if _home_score == _away_score and overtime_enabled and not is_overtime:
+		_begin_intermission(period_index, true)
+		return
+	_end_match()
+
+func _begin_intermission(next_period_index: int, next_is_overtime: bool) -> void:
+	is_intermission = true
+	emit_signal("intermission_started", period_index, next_period_index)
+	var timer: SceneTreeTimer = get_tree().create_timer(INTERMISSION_SECONDS)
+	timer.timeout.connect(_finish_intermission.bind(next_period_index, next_is_overtime))
+
+func _finish_intermission(next_period_index: int, next_is_overtime: bool) -> void:
 	if match_over:
 		return
-
-	if period_index + 1 < period_count:
-		period_index += 1
-		time_left = period_seconds
-		is_running = true
-		emit_signal("period_changed", period_index, _period_label(), false)
-		emit_signal("time_changed", time_left, period_index, _period_label())
-		return
-
-	# Final period over.
-	if _home_score == _away_score and overtime_enabled and not is_overtime:
-		is_overtime = true
-		time_left = 999.0  # OT clock counts up visually but ends on next goal.
-		is_running = true
-		emit_signal("period_changed", period_index, _period_label(), true)
-		emit_signal("time_changed", time_left, period_index, _period_label())
-		return
-
-	_end_match()
+	is_intermission = false
+	is_overtime = next_is_overtime
+	period_index = next_period_index
+	time_left = 999.0 if is_overtime else period_seconds
+	is_running = true
+	emit_signal("period_changed", period_index, _period_label(), is_overtime)
+	emit_signal("time_changed", time_left, period_index, _period_label())
 
 func _end_match() -> void:
 	match_over = true
 	is_running = false
+	is_intermission = false
 	var winner: String = "DRAW"
 	if _home_score > _away_score:
 		winner = "HOME"
