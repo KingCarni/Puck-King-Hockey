@@ -105,7 +105,10 @@ func _add_stack(store: Dictionary, ability: RefCounted) -> bool:
 	})
 	var current_stacks: int = int(entry.get("stacks", 0))
 	if current_stacks >= ability.max_stacks:
-		return false
+		# A reward draft must always be resolvable. Treat selecting an already
+		# capped ability as a consumed/no-op reward instead of trapping the match
+		# behind a draft that can no longer apply any offered option.
+		return true
 	entry["definition"] = ability
 	entry["stacks"] = current_stacks + 1
 	store[ability.id] = entry
