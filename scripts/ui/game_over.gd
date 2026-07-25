@@ -136,6 +136,11 @@ func open(winner: String, home_score: int, away_score: int) -> void:
 	visible = true
 	get_tree().paused = true
 
+	# Adventure matches continue the tournament instead of offering a rematch.
+	var adventure: bool = _is_adventure_match()
+	_rematch_button.visible = not adventure
+	_menu_button.text = "CONTINUE TOURNAMENT" if adventure else "RETURN TO MENU"
+
 	var headline: String = "MATCH OVER"
 	if winner == "HOME":
 		headline = "YOU WIN!"
@@ -154,7 +159,8 @@ func open(winner: String, home_score: int, away_score: int) -> void:
 	tween.tween_property(_root, "modulate:a", 1.0, 0.18)
 	tween.tween_property(_frame, "scale", Vector2(1.0, 1.0), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.set_parallel(false)
-	tween.tween_callback(Callable(_rematch_button, "grab_focus"))
+	var focus_target: Button = _rematch_button if _rematch_button.visible else _menu_button
+	tween.tween_callback(Callable(focus_target, "grab_focus"))
 
 func close() -> void:
 	_is_open = false
@@ -171,5 +177,13 @@ func _on_menu_pressed() -> void:
 	if has_node("/root/SfxPlayer"):
 		SfxPlayer.play(SfxPlayer.ID_UI_CLICK)
 	close()
+	if _is_adventure_match():
+		var flow: Node = get_node_or_null("/root/AdventureFlow")
+		flow.call("on_match_finished")
+		return
 	emit_signal("main_menu_requested")
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+
+func _is_adventure_match() -> bool:
+	var flow: Node = get_node_or_null("/root/AdventureFlow")
+	return flow != null and flow.has_method("is_adventure_match") and bool(flow.call("is_adventure_match"))

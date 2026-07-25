@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 UiPalette="*res://scripts/ui/ui_palette.gd"
 SfxPlayer="*res://scripts/audio/sfx_player.gd"
 MatchSession="*res://scripts/core/match_session.gd"
+AdventureFlow="*res://scripts/adventure/adventure_flow.gd"
 
 [display]
 

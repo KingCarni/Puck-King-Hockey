@@ -44,6 +44,7 @@ var _blurb_label: Label = null
 var _preset_buttons: Array[Button] = []
 var _action_buttons: Array[Button] = []
 var _play_button: Button = null
+var _adventure_button: Button = null
 var _stats_button: Button = null
 var _extras_button: Button = null
 var _settings_button: Button = null
@@ -315,12 +316,14 @@ func _build_action_panel(parent: HBoxContainer) -> void:
 	vbox.add_child(_make_header_ribbon("ACTIONS", Color(0.10, 0.22, 0.46, 1.0)))
 
 	_play_button = _make_menu_button("PLAY", COLOR_BLOOD_RED, "icon_play", 38, 104)
+	_adventure_button = _make_menu_button("ADVENTURE", Color(0.30, 0.20, 0.02, 0.96), "icon_crown", 32, 88)
 	_stats_button = _make_menu_button("STATS", COLOR_DARK_FILL, "icon_trophy", 32, 88)
 	_extras_button = _make_menu_button("EXTRAS", COLOR_DARK_FILL, "icon_crown", 32, 88)
 	_settings_button = _make_menu_button("SETTINGS", COLOR_DARK_FILL, "icon_settings", 32, 88)
 	_quit_button = _make_menu_button("QUIT", COLOR_DARK_FILL, "icon_quit", 32, 88)
 
 	_play_button.pressed.connect(_on_play_pressed)
+	_adventure_button.pressed.connect(_on_adventure_pressed)
 	_stats_button.pressed.connect(_on_stats_pressed)
 	_extras_button.pressed.connect(_on_extras_pressed)
 	_settings_button.pressed.connect(_on_settings_pressed)
@@ -329,7 +332,7 @@ func _build_action_panel(parent: HBoxContainer) -> void:
 	if OS.has_feature("web"):
 		_quit_button.visible = false
 
-	var actions: Array[Button] = [_play_button, _stats_button, _extras_button, _settings_button, _quit_button]
+	var actions: Array[Button] = [_play_button, _adventure_button, _stats_button, _extras_button, _settings_button, _quit_button]
 	for btn in actions:
 		vbox.add_child(btn)
 		if btn.visible:
@@ -523,6 +526,14 @@ func _on_play_pressed() -> void:
 	if match_session != null and match_session.has_method("set_preset"):
 		match_session.call("set_preset", preset)
 	get_tree().change_scene_to_file(MATCH_SCENE_PATH)
+
+func _on_adventure_pressed() -> void:
+	_play_sfx("ui_click")
+	var flow: Node = get_node_or_null("/root/AdventureFlow")
+	if flow != null and flow.has_method("open_hub"):
+		flow.call("open_hub")
+	else:
+		_show_small_toast("ADVENTURE MODE UNAVAILABLE")
 
 func _on_stats_pressed() -> void:
 	_play_sfx("ui_click")
