@@ -5,7 +5,7 @@ extends Node3D
 # skater's projected screen position. This guarantees they stay below the
 # player and prevents depth/layer flicker against skater art.
 
-const SCREEN_OFFSET: Vector2 = Vector2(0.0, 31.0)
+const SCREEN_OFFSET: Vector2 = Vector2(0.0, 39.0)
 const SHADOW_OFFSET: Vector2 = Vector2(1.0, 1.0)
 const LABEL_SIZE: Vector2 = Vector2(118.0, 24.0)
 const NORMAL_FONT_SIZE: int = 14
